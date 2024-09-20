@@ -21,8 +21,7 @@
  * @copyright  2017 Willian Mano http://conecti.me
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
+namespace block_ranking;
 
 /**
  * Block ranking helper class
@@ -49,10 +48,10 @@ class block_ranking_helper {
 
             $enablemultipleattempts = $DB->get_record(
                                         'config_plugins',
-                                        array(
+                                        [
                                             'plugin' => 'block_ranking',
-                                            'name' => 'enable_multiple_quizz_attempts'
-                                        )
+                                            'name' => 'enable_multiple_quizz_attempts',
+                                        ]
                                     );
 
             if (isset($enablemultipleattempts) && $enablemultipleattempts->value == 0) {
@@ -107,7 +106,7 @@ class block_ranking_helper {
     protected static function get_coursemodule_instance($coursemoduleid, $userid) {
         global $DB;
 
-        $cmc = $DB->get_record('course_modules_completion', array('coursemoduleid' => $coursemoduleid, 'userid' => $userid), '*');
+        $cmc = $DB->get_record('course_modules_completion', ['coursemoduleid' => $coursemoduleid, 'userid' => $userid], '*');
 
         if ($cmc && $cmc->id && $cmc->completionstate != 0) {
             return $cmc->id;
@@ -126,7 +125,7 @@ class block_ranking_helper {
     protected static function get_quiz_grade($id) {
         global $DB;
 
-        $grade = $DB->get_record('quiz_attempts', array('id' => $id), '*');
+        $grade = $DB->get_record('quiz_attempts', ['id' => $id], '*');
 
         return $grade->sumgrades;
     }
@@ -141,7 +140,7 @@ class block_ranking_helper {
     protected static function is_completion_completed($cmcid) {
         global $DB;
 
-        $cmc = $DB->get_record('course_modules_completion', array('id' => $cmcid), '*');
+        $cmc = $DB->get_record('course_modules_completion', ['id' => $cmcid], '*');
 
         if ($cmc) {
             return (bool) $cmc->completionstate;

@@ -21,8 +21,7 @@
  * @copyright  2017 Willian Mano http://conecti.me
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
+namespace block_ranking;
 
 /**
  * Block ranking manager class
@@ -288,7 +287,7 @@ class block_ranking_manager {
         global $DB;
 
         if (empty(self::$config)) {
-            $records = $DB->get_records('config_plugins', array('plugin' => 'block_ranking'));
+            $records = $DB->get_records('config_plugins', ['plugin' => 'block_ranking']);
 
             foreach ($records as $key => $value) {
                 self::$config[$value->name] = $value->value;

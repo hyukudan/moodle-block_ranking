@@ -26,14 +26,13 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$functions = array(
-    'blocks_ranking_get_ranking' => array(
-        'classname' => 'blocks_ranking_external',
-        'classpath'   => 'blocks/ranking/classes/external.php',
+$functions = [
+    'block_ranking_get_ranking' => [
+        'classname' => 'block_ranking\external\ranking',
+        'classpath'   => 'blocks/ranking/classes/external/ranking.php',
         'methodname' => 'get_ranking',
         'description' => 'Returns a list of students and rank.',
         'type' => 'read',
-        'capabilities' => 'mod/data:viewentry',
-        'services' => array(MOODLE_OFFICIAL_MOBILE_SERVICE)
-    )
-);
+        'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE]
+    ]
+];

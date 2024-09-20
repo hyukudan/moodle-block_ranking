@@ -23,8 +23,6 @@
  */
 namespace block_ranking;
 
-defined('MOODLE_INTERNAL') || die();
-
 use user_picture;
 
 /**
@@ -51,7 +49,7 @@ class rankinglib {
 
         $context = $PAGE->context;
 
-        $userfields = user_picture::fields('u', array('username'));
+        $userfields = user_picture::fields('u', ['username']);
         $sql = "SELECT
                 DISTINCT $userfields, r.points
             FROM
@@ -103,7 +101,7 @@ class rankinglib {
 
         $context = $PAGE->context;
 
-        $userfields = user_picture::fields('u', array('username'));
+        $userfields = user_picture::fields('u', ['username']);
         $sql = "SELECT
                 DISTINCT $userfields,
                 sum(rl.points) as points
@@ -167,7 +165,7 @@ class rankinglib {
             }
 
             $data[$i]->position = $lastpos;
-            $data[$i]->userpic = $OUTPUT->user_picture($data[$i], array('size' => 24, 'alttext' => false));
+            $data[$i]->userpic = $OUTPUT->user_picture($data[$i], ['size' => 24, 'alttext' => false]);
         }
 
         return $data;

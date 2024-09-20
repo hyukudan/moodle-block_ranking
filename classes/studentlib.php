@@ -23,8 +23,6 @@
  */
 namespace block_ranking;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Ranking block student lib class.
  *

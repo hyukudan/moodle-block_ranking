@@ -22,10 +22,17 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @since      Moodle 3.1
  */
+namespace block_ranking\external;
 
-defined('MOODLE_INTERNAL') || die;
+use core\context\course as context_course;
+use core\context\user as context_user;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
+use core_external\external_warnings;
 
-require_once("$CFG->libdir/externallib.php");
 require_once($CFG->dirroot.'/blocks/ranking/lib.php');
 
 /**
@@ -34,23 +41,22 @@ require_once($CFG->dirroot.'/blocks/ranking/lib.php');
  * @copyright 2017 Willian Mano http://conecti.me
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class blocks_ranking_external extends external_api {
+class ranking extends external_api {
 
     /**
      * Describes the parameters for get_databases_by_courses.
      *
-     * @return external_external_function_parameters
+     * @return external_function_parameters
+     *
      * @since Moodle 2.9
      */
     public static function get_ranking_parameters() {
-        return new external_function_parameters (
-            array(
-                'courseids' => new external_multiple_structure(
-                    new external_value(PARAM_INT, 'course id', VALUE_REQUIRED),
-                    'Array of course ids', VALUE_DEFAULT, array()
-                ),
-            )
-        );
+        return new external_function_parameters ([
+            'courseids' => new external_multiple_structure(
+                new external_value(PARAM_INT, 'course id', VALUE_REQUIRED),
+                'Array of course ids', VALUE_DEFAULT, []
+            ),
+        ]);
     }
 
     /**
@@ -61,24 +67,19 @@ class blocks_ranking_external extends external_api {
      * @return array the database details
      * @since Moodle 2.9
      */
-    public static function get_ranking($courseids = array()) {
-        global $DB, $COURSE;
+    public static function get_ranking($courseids = []) {
+        global $DB;
 
-        $params = self::validate_parameters(self::get_ranking_parameters(), array('courseids' => $courseids));
-        $warnings = array();
+        $params = self::validate_parameters(self::get_ranking_parameters(), ['courseids' => $courseids]);
+        $warnings = [];
 
-        $mycourses = array();
-
-        // Array to store the databases to return.
-        $arrdatabases = array();
-
-        $studentlist = array();
+        $studentlist = [];
 
         // Ensure there are courseids to loop through.
         if (!empty($params['courseids'])) {
             foreach ($params['courseids'] as $courseid) {
                 // Code get from report.php .
-                $course = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
+                $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
 
                 require_login($courseid);
                 $context = context_course::instance($courseid);
@@ -86,7 +87,7 @@ class blocks_ranking_external extends external_api {
                 $perpage = 100;
                 $group = null;
 
-                $userfields = user_picture::fields('u', array('username'));
+                $userfields = \user_picture::fields('u', ['username']);
                 $from = "FROM {user} u
                         INNER JOIN {role_assignments} a ON a.userid = u.id
                         LEFT JOIN {ranking_points} r ON r.userid = u.id AND r.courseid = :r_courseid
@@ -129,7 +130,7 @@ class blocks_ranking_external extends external_api {
                     $contextid = $context->id;
                     $image = null;
 
-                    $url = moodle_url::make_pluginfile_url($contextid, 'user', 'icon', null, '/', $image);
+                    $url = \moodle_url::make_pluginfile_url($contextid, 'user', 'icon', null, '/', $image);
 
                     // Position, picture, name, points.
                     $row = array(
@@ -144,7 +145,7 @@ class blocks_ranking_external extends external_api {
             }
         }
 
-        $result = array();
+        $result = [];
         $result['leaderboard'] = $studentlist;
         $result['warnings'] = $warnings;
 

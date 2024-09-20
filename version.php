@@ -25,8 +25,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2017050300;
-$plugin->requires  = 2011120511;
+$plugin->version   = 2024092000;
+$plugin->requires  = 2023100400;
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'Version for Moodle 3.2 onwards';
+$plugin->release   = 'Version for Moodle 4.3 onwards';
 $plugin->component = 'block_ranking';

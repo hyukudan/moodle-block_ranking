@@ -49,10 +49,10 @@ function xmldb_block_ranking_upgrade($oldversion, $block) {
     }
 
     if ($oldversion < 2015051800) {
-        $criteria = array(
+        $criteria = [
             'plugin' => 'block_ranking',
-            'name' => 'lastcomputedid'
-        );
+            'name' => 'lastcomputedid',
+        ];
 
         $DB->delete_records('config_plugins', $criteria);
 

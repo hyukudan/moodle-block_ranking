@@ -23,8 +23,6 @@
  */
 namespace block_ranking\output;
 
-defined('MOODLE_INTERNAL') || die();
-
 use block_ranking\rankinglib;
 use renderable;
 use templatable;
