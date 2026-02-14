@@ -32,7 +32,7 @@ use advanced_testcase;
  * @package   block_ranking
  * @copyright 2024 block_ranking contributors
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers \block_ranking\block_ranking_manager
+ * @covers \block_ranking\manager
  * @covers \block_ranking\block_ranking_helper
  * @covers \block_ranking\privacy\provider
  */
@@ -64,7 +64,7 @@ class block_ranking_test extends advanced_testcase {
         ]);
 
         // Call the manager to add points.
-        block_ranking_manager::add_user_points($cmcid);
+        manager::add_user_points($cmcid);
 
         // Verify points were recorded.
         $points = $DB->get_record('ranking_points', [
@@ -105,13 +105,13 @@ class block_ranking_test extends advanced_testcase {
         ]);
 
         // Add points twice for the same completion.
-        block_ranking_manager::add_user_points($cmcid);
+        manager::add_user_points($cmcid);
         $firstpoints = $DB->get_record('ranking_points', [
             'userid' => $student->id,
             'courseid' => $course->id,
         ]);
 
-        block_ranking_manager::add_user_points($cmcid);
+        manager::add_user_points($cmcid);
         $secondpoints = $DB->get_record('ranking_points', [
             'userid' => $student->id,
             'courseid' => $course->id,

@@ -67,7 +67,7 @@ class block_ranking_helper {
             if ($objectid) {
                 $grade = self::get_quiz_grade($event->objectid);
 
-                block_ranking_manager::add_user_points($objectid, $grade);
+                manager::add_user_points($objectid, $grade);
             }
 
             return;
@@ -81,7 +81,7 @@ class block_ranking_helper {
             return;
         }
 
-        block_ranking_manager::add_user_points($event->objectid);
+        manager::add_user_points($event->objectid);
     }
 
     /**
