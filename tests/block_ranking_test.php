@@ -211,7 +211,8 @@ class block_ranking_test extends advanced_testcase {
         $this->assertNotEmpty($contextlist->get_contextids());
 
         $coursecontext = \context_course::instance($course->id);
-        $this->assertContains($coursecontext->id, $contextlist->get_contextids());
+        // Use loose comparison: get_contextids() returns strings from SQL, context->id is int.
+        $this->assertContainsEquals($coursecontext->id, $contextlist->get_contextids());
     }
 
     /**
