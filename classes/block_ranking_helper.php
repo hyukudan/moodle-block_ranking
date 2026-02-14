@@ -60,7 +60,7 @@ class block_ranking_helper {
     protected static function process_event(\core\event\base $event) {
         global $DB;
 
-        if (!self::is_student($event->relateduserid)) {
+        if (!self::is_student($event->relateduserid, $event->courseid)) {
             return;
         }
 
@@ -133,13 +133,14 @@ class block_ranking_helper {
     }
 
     /**
-     * Verify if the user is a student
+     * Verify if the user is a student in the given course.
      *
      * @param int $userid
+     * @param int $courseid
      *
      * @return boolean
      */
-    protected static function is_student($userid) {
+    protected static function is_student($userid, $courseid = 0) {
         global $DB;
 
         $roleids = self::get_student_role_ids();
@@ -150,9 +151,21 @@ class block_ranking_helper {
         list($insql, $params) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
         $params['userid'] = $userid;
 
-        $sql = "SELECT COUNT(1)
-                  FROM {role_assignments}
-                 WHERE userid = :userid AND roleid $insql";
+        if ($courseid > 0) {
+            $coursecontext = \context_course::instance($courseid, IGNORE_MISSING);
+            if (!$coursecontext) {
+                return false;
+            }
+            $params['contextid'] = $coursecontext->id;
+
+            $sql = "SELECT COUNT(1)
+                      FROM {role_assignments}
+                     WHERE userid = :userid AND roleid $insql AND contextid = :contextid";
+        } else {
+            $sql = "SELECT COUNT(1)
+                      FROM {role_assignments}
+                     WHERE userid = :userid AND roleid $insql";
+        }
 
         return $DB->count_records_sql($sql, $params) > 0;
     }
@@ -239,6 +252,10 @@ class block_ranking_helper {
         $params['cmcid'] = $cmcid;
 
         $qtd = $DB->get_record_sql($sql, $params);
+
+        if (!$qtd) {
+            return 0;
+        }
 
         return (int) $qtd->qtd;
     }

@@ -85,7 +85,7 @@ function block_ranking_get_average_points_by_group() {
     foreach ($groups as $key => $value) {
         foreach ($groupsmembersnumber as $group) {
             if ($value->groupname == $group->groupname) {
-                $groups[$key]->points = $value->points / $group->qtd;
+                $groups[$key]->points = ($group->qtd > 0) ? ($value->points / $group->qtd) : 0;
                 continue 2;
             }
         }

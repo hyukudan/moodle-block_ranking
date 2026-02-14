@@ -62,14 +62,14 @@ class block_footer implements renderable, templatable {
     public function export_for_template(renderer_base $output) {
         $buttons[] = [
             'title' => get_string('see_full_ranking', 'block_ranking'),
-            'url' => new \moodle_url('/blocks/ranking/report.php', ['courseid' => $this->courseid])
+            'url' => (new \moodle_url('/blocks/ranking/report.php', ['courseid' => $this->courseid]))->out(false),
         ];
 
         $context = \context_course::instance($this->courseid);
         if (has_capability('moodle/site:accessallgroups', $context)) {
             $buttons[] = [
                 'title' => get_string('ranking_graphs', 'block_ranking'),
-                'url' => new \moodle_url('/blocks/ranking/graphs.php', ['courseid' => $this->courseid])
+                'url' => (new \moodle_url('/blocks/ranking/graphs.php', ['courseid' => $this->courseid]))->out(false),
             ];
         }
 

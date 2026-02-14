@@ -294,7 +294,9 @@ class manager {
 
             $index = (int) $finalgrade - 1;
             if ($index >= 0 && $index < count($scale)) {
-                $finalgrade = $scale[$index];
+                $scalevalue = trim($scale[$index]);
+                // Scale values may be text strings; use numeric value if possible.
+                $finalgrade = is_numeric($scalevalue) ? (float) $scalevalue : ($index + 1);
             }
         }
 
@@ -312,31 +314,33 @@ class manager {
     protected static function add_or_update_user_points($userid, $courseid, $points) {
         global $DB;
 
-        $sql = "SELECT * FROM {ranking_points}
-                WHERE userid = :userid AND courseid = :courseid";
-        $params['userid'] = $userid;
-        $params['courseid'] = $courseid;
+        // Try atomic UPDATE first to avoid race conditions.
+        $sql = "UPDATE {ranking_points}
+                   SET points = points + :newpoints, timemodified = :time
+                 WHERE userid = :userid AND courseid = :courseid";
+        $DB->execute($sql, [
+            'newpoints' => $points,
+            'time' => time(),
+            'userid' => $userid,
+            'courseid' => $courseid,
+        ]);
 
-        $userpoints = $DB->get_record_sql($sql, $params);
+        // Check if update affected any rows.
+        $existing = $DB->get_record('ranking_points', ['userid' => $userid, 'courseid' => $courseid]);
 
-        // User dont have points yet.
-        if (empty($userpoints)) {
-            // Basic block configuration.
-            $userpoints = new \stdClass();
-            $userpoints->userid = $userid;
-            $userpoints->courseid = $courseid;
-            $userpoints->points = $points;
-            $userpoints->timecreated = time();
-            $userpoints->timemodified = time();
-
-            $rankingid = $DB->insert_record('ranking_points', $userpoints, true);
-        } else {
-            $userpoints->points = $userpoints->points + $points;
-            $userpoints->timemodified = time();
-            $DB->update_record('ranking_points', $userpoints);
-            $rankingid = $userpoints->id;
+        if ($existing) {
+            return $existing->id;
         }
-        return $rankingid;
+
+        // No record existed — insert new one.
+        $userpoints = new \stdClass();
+        $userpoints->userid = $userid;
+        $userpoints->courseid = $courseid;
+        $userpoints->points = $points;
+        $userpoints->timecreated = time();
+        $userpoints->timemodified = time();
+
+        return $DB->insert_record('ranking_points', $userpoints, true);
     }
 
     /**

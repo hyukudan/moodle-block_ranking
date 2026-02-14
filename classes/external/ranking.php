@@ -85,6 +85,7 @@ class ranking extends external_api {
 
                 require_login($courseid);
                 $context = context_course::instance($courseid);
+                self::validate_context($context);
 
                 $perpage = 100;
                 $group = null;
@@ -129,6 +130,12 @@ class ranking extends external_api {
                 if (empty($data)) {
                     continue;
                 }
+
+                // Coerce null points to 0 for students with no ranking record.
+                for ($j = 0; $j < count($data); $j++) {
+                    $data[$j]->points = (float) ($data[$j]->points ?? 0);
+                }
+
                 $lastpos = 1;
                 $lastpoints = current($data)->points;
                 for ($i = 0; $i < count($data); $i++) {
@@ -179,7 +186,7 @@ class ranking extends external_api {
                         array(
                             'position' => new external_value(PARAM_INT, 'position'),
                             'picture' => new external_value(PARAM_TEXT, 'picture url'),
-                            'name' => new external_value(PARAM_RAW, 'name'),
+                            'name' => new external_value(PARAM_TEXT, 'name'),
                             'points' => new external_value(PARAM_FLOAT, 'points')
                         )
                     )

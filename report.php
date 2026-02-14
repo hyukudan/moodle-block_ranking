@@ -61,8 +61,9 @@ if ($format === 'csv') {
     $renderer = $PAGE->get_renderer('block_ranking');
     $data = $renderable->export_for_template($renderer);
 
+    $filename = clean_filename('ranking_' . $course->shortname . '_' . $period . '.csv');
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="ranking_' . $course->shortname . '_' . $period . '.csv"');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
 
     $out = fopen('php://output', 'w');
     fputcsv($out, [

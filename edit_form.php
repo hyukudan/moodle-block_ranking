@@ -47,10 +47,12 @@ class block_ranking_edit_form extends block_edit_form {
 
         $mform->addElement('text', 'config_ranking_title', get_string('blocktitle', 'block_ranking'));
         $mform->setDefault('config_ranking_title', get_string('ranking', 'block_ranking'));
+        $mform->setType('config_ranking_title', PARAM_TEXT);
         $mform->addRule('config_ranking_title', null, 'required', null, 'client');
 
+        $rankingsize = get_config('block_ranking', 'rankingsize') ?: 10;
         $mform->addElement('text', 'config_ranking_rankingsize', get_string('rankingsize', 'block_ranking'));
-        $mform->setDefault('config_ranking_rankingsize', $CFG->block_ranking_rankingsize);
+        $mform->setDefault('config_ranking_rankingsize', $rankingsize);
         $mform->setType('config_ranking_rankingsize', PARAM_INT);
     }
 }

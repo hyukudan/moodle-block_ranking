@@ -193,10 +193,15 @@ class provider implements
         $courseid = $context->instanceid;
 
         $transaction = $DB->start_delegated_transaction();
-        // Delete logs first (they reference ranking_points via rankingid).
-        $DB->delete_records('ranking_logs', ['courseid' => $courseid]);
-        $DB->delete_records('ranking_points', ['courseid' => $courseid]);
-        $transaction->allow_commit();
+        try {
+            // Delete logs first (they reference ranking_points via rankingid).
+            $DB->delete_records('ranking_logs', ['courseid' => $courseid]);
+            $DB->delete_records('ranking_points', ['courseid' => $courseid]);
+            $transaction->allow_commit();
+        } catch (\Exception $e) {
+            $transaction->rollback($e);
+            throw $e;
+        }
     }
 
     /**
@@ -217,22 +222,26 @@ class provider implements
             $courseid = $context->instanceid;
 
             $transaction = $DB->start_delegated_transaction();
+            try {
+                // Get ranking point IDs for this user/course to delete associated logs.
+                $pointids = $DB->get_fieldset_select(
+                    'ranking_points',
+                    'id',
+                    'userid = :userid AND courseid = :courseid',
+                    ['userid' => $userid, 'courseid' => $courseid]
+                );
 
-            // Get ranking point IDs for this user/course to delete associated logs.
-            $pointids = $DB->get_fieldset_select(
-                'ranking_points',
-                'id',
-                'userid = :userid AND courseid = :courseid',
-                ['userid' => $userid, 'courseid' => $courseid]
-            );
+                if (!empty($pointids)) {
+                    list($insql, $params) = $DB->get_in_or_equal($pointids);
+                    $DB->delete_records_select('ranking_logs', "rankingid $insql", $params);
+                }
 
-            if (!empty($pointids)) {
-                list($insql, $params) = $DB->get_in_or_equal($pointids);
-                $DB->delete_records_select('ranking_logs', "rankingid $insql", $params);
+                $DB->delete_records('ranking_points', ['userid' => $userid, 'courseid' => $courseid]);
+                $transaction->allow_commit();
+            } catch (\Exception $e) {
+                $transaction->rollback($e);
+                throw $e;
             }
-
-            $DB->delete_records('ranking_points', ['userid' => $userid, 'courseid' => $courseid]);
-            $transaction->allow_commit();
         }
     }
 
@@ -258,20 +267,24 @@ class provider implements
         }
 
         $transaction = $DB->start_delegated_transaction();
+        try {
+            list($usersql, $userparams) = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
 
-        list($usersql, $userparams) = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
+            // Get ranking point IDs for these users in this course.
+            $sql = "SELECT id FROM {ranking_points} WHERE userid $usersql AND courseid = :courseid";
+            $params = array_merge($userparams, ['courseid' => $courseid]);
+            $pointids = $DB->get_fieldset_sql($sql, $params);
 
-        // Get ranking point IDs for these users in this course.
-        $sql = "SELECT id FROM {ranking_points} WHERE userid $usersql AND courseid = :courseid";
-        $params = array_merge($userparams, ['courseid' => $courseid]);
-        $pointids = $DB->get_fieldset_sql($sql, $params);
+            if (!empty($pointids)) {
+                list($pointsql, $pointparams) = $DB->get_in_or_equal($pointids);
+                $DB->delete_records_select('ranking_logs', "rankingid $pointsql", $pointparams);
+            }
 
-        if (!empty($pointids)) {
-            list($pointsql, $pointparams) = $DB->get_in_or_equal($pointids);
-            $DB->delete_records_select('ranking_logs', "rankingid $pointsql", $pointparams);
+            $DB->delete_records_select('ranking_points', "userid $usersql AND courseid = :courseid", $params);
+            $transaction->allow_commit();
+        } catch (\Exception $e) {
+            $transaction->rollback($e);
+            throw $e;
         }
-
-        $DB->delete_records_select('ranking_points', "userid $usersql AND courseid = :courseid", $params);
-        $transaction->allow_commit();
     }
 }
