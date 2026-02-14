@@ -107,10 +107,23 @@ class studentlib {
      * @return bool
      */
     public function is_student() {
-        global $COURSE, $USER;
+        global $COURSE, $USER, $DB;
 
         $context = \context_course::instance($COURSE->id);
 
-        return user_has_role_assignment($USER->id, 5, $context->id);
+        $roleids = block_ranking_helper::get_student_role_ids();
+        if (empty($roleids)) {
+            return false;
+        }
+
+        list($insql, $params) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+        $params['userid'] = $USER->id;
+        $params['contextid'] = $context->id;
+
+        $sql = "SELECT COUNT(1)
+                  FROM {role_assignments}
+                 WHERE userid = :userid AND contextid = :contextid AND roleid $insql";
+
+        return $DB->count_records_sql($sql, $params) > 0;
     }
 }

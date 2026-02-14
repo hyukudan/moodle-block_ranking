@@ -1,66 +1,174 @@
-Moodle Ranking block repository
-===============================
+# Moodle Ranking Block (Fork)
 
-VERSION 2
----------
+> **Fork of [hyukudan/moodle-block_ranking](https://github.com/hyukudan/moodle-block_ranking)**
+> The original plugin has been abandoned and is incompatible with modern Moodle versions.
+> This fork brings it up to date with **Moodle 4.5+ / 5.x**, fixing critical security issues, adding GDPR compliance, modernizing the UI, and adding new features.
 
-This block improves gamefication into the moodle plataform.
+## What is this plugin?
 
-This new version is more simpler and easy to use, but, with more visual.
+This block adds gamification to Moodle through a **student ranking system**. Students earn points by completing course activities, and a leaderboard displays their positions. The plugin listens to Moodle events in real-time -- no cron dependency required.
 
-The plugin works listening moodle events, so now, the points are added in real time.
+The ranking works with **activity completion tracking**: you need to enable it and configure completion criteria for the activities you want to monitor.
 
-The ranking works with the activity completion tracking, so you need to enable that and configure the criterias for all activities you want to monitor. The plugin only add points to activities with completion criterias. The method to add points remains the same.
+### How points work
 
-There are different ways to gain points.
+- Students earn configurable points for completing activities (default: 2 points each).
+- Activities with grades (assignments, quizzes, forums, etc.) award **base points + (grade x multiplier)**. For example: completing an assignment with a grade of 10 and multiplier 1.0 gives 2 + 10 = 12 points.
+- Points are configurable per activity type (assign, resource, forum, page, workshop, quiz, lesson, SCORM, URL) in the plugin settings.
+- A **grade multiplier** setting allows scaling grade-based bonus points (e.g., 0.5 for half grade, 2.0 for double).
 
-For example:
- * If a student completes a html page the ranking adds 2 points.
- * If a student completes an assignment and it is ended only when the student receive a grade. The ranking add 2 points plus the grade points to the student. You can configure the default points in the block configuraion.
+## What's new in this fork
 
-> **NOTE**: All the activities that needs grade to be finished will add the activity points (default 2) more the activity grade. For example: If the course has one assignment and it's configured to be completed only after the grade is received by the student and let's say a random student received by the end of the assignment 10(ten) as his grade. In this case that student will obtain 12(twelve) points, the 2(two pre-configured) from finishing the activity plus 10(ten) from his grade.
+### Security fixes
+- **Fixed SQL injection vulnerability** in `lib.php` -- hardcoded `mdl_` table prefix replaced with Moodle's `{tablename}` syntax
+- **Removed hardcoded role ID 5** -- the plugin assumed the student role was always ID 5, which is only true on default installations. Now uses a **configurable multi-select setting** with `get_archetype_roles('student')` as the default
+- **Replaced deprecated `user_has_role_assignment()`** -- uses direct `{role_assignments}` queries compatible with Moodle 5.x
+- **Removed deprecated `classpath`** parameter from web service definition
 
->**This only occurs with activities that have grades. ex: foruns, assignments, lessons, etc...**
+### GDPR / Privacy API compliance
+- **Full Privacy API implementation** (`classes/privacy/provider.php`) -- the plugin now properly declares what personal data it stores, and supports data export and deletion on GDPR requests. This is **mandatory** for Moodle 4.x+ plugins.
 
-Update Notes
-------------
+### Performance improvements
+- **Database indexes** added to `ranking_points` and `ranking_logs` tables:
+  - `ranking_points(courseid, userid)` -- UNIQUE, main ranking query optimization
+  - `ranking_points(userid)` -- user lookups
+  - `ranking_logs(rankingid)` -- JOIN optimization
+  - `ranking_logs(course_modules_completion)` -- duplicate detection
+- **Moodle Cache API (MUC)** integration -- ranking queries are cached for 5 minutes with automatic invalidation when points change. Reduces database load significantly on courses with many students.
+- **Transactional writes** -- point additions and log entries are wrapped in a database transaction to prevent orphaned records on partial failures.
 
-> - Added event listeners to add point
-> - Removed cron dependency
-> - Added a weekly ranking
-> - Added a monthly ranking
-> - Added a tiny report with top 100 students in general ranking
-> - Added filter the tiny report by groups (the course group mode needs to be "separeted groups" or "visible groups")
-> - Now you don't need configure the course completion tracking, only the activities completion criterias. Again, the plugin only monitors the activities with completion criteria
-> - The table ranking_cmc_mirror was removed.
+### Modernized UI/UX
+- **Visual podium** -- top 3 positions displayed with gold/silver/bronze colored badges
+- **Circular avatars** next to student names
+- **Progress bars** showing relative points visually
+- **Current user highlight** -- your row is highlighted in blue
+- **Responsive design** -- mobile-friendly layout
+- **Subtle entry animations** for ranking items
+- **Bootstrap 5** compatible tabs and components
+- **Your Score card** -- clean grid layout showing general/weekly/monthly points
 
-Installation
-------------
+### Enhanced report page
+- **Period filter** -- filter ranking by All time, Weekly, or Monthly
+- **CSV export** -- download ranking data as CSV file
+- **Points evolution chart** -- line chart showing daily points over time (using Moodle's Chart API)
+- **Group selector** -- filter by course groups
 
-**First way**
+### Configurable points system
+- **Extended activity types** -- individual point settings for quiz, lesson, SCORM, and URL activities (in addition to the existing assign, resource, forum, page, workshop)
+- **Grade multiplier** -- configurable multiplier for grade-based bonus points
+- **Streamlined config** -- map-based activity point lookup instead of switch statement
 
-- Clone this repository into the folder blocks.
-- Access the notification area in moodle and install
+### Notifications
+- **Moodle Message API integration** -- notifications when a student reaches the top 3
+- Configurable via user notification preferences (popup, email, mobile push)
 
-**Second way**
+### New web service endpoints
+- `block_ranking_get_user_position` -- get current user's ranking position and points
+- `block_ranking_get_user_points_history` -- get user's point transaction history
+- All endpoints registered with Moodle Mobile service
 
-- Download this repository
-- Extract the content
-- Put the folder into the folder blocks of your moodle
-- Access the notification area in moodle and install
+### Custom events for plugin integration
+- **`\block_ranking\event\points_awarded`** -- fired when points are awarded, allowing other plugins (e.g., local_achievements) to observe and react
+- Event includes: points awarded, total points, course context
 
-Post instalation
-----------------
-After you have installed the block you just add it into the moodle course.
+### Auto-refresh
+- **AMD JavaScript module** (`amd/src/ranking.js`) -- auto-refreshes ranking data every 60 seconds via AJAX polling
+- Pauses when browser tab is hidden (saves resources)
+- Smooth transition animations on point updates
 
-> The ranking block works together with the activity completion, so you need to enable that and configure the criterias for all activities you want to monitor. The ranking block monitors these activities and add points to the students based on accomplishing the activities.
+### Testing
+- **PHPUnit tests** -- real unit tests replacing the placeholder (points addition, duplicate detection, ranking order, role filtering, privacy export/delete, cache invalidation)
+- **Behat tests** -- acceptance tests for block addition, student score display, report page features
 
-Enabling completion tracking
------------------------------------
->- Go to: Site administration / Advanced features
->- Turn on the item "**Enable completion tracking**"
->- Inside the course go to: Course administration / Edit settings
->- In the section Completion tracking set "**Completion tracking**" to yes
->- Save
+### Bug fixes
+- Fixed `$stirng` typos in both English and Portuguese language files
 
-**OBS:** The ranking block needs the moodle cron configured and working fine. Read the moodle documentation about the cron file (for more information..)
+## Requirements
+
+- **Moodle 4.5+** (tested up to Moodle 5.1.1)
+- Activity completion tracking enabled at site and course level
+
+## Installation
+
+### Option 1: Git clone
+```bash
+cd /path/to/moodle/blocks
+git clone https://github.com/hyukudan/moodle-block_ranking.git ranking
+```
+Then visit **Site administration > Notifications** to complete the installation.
+
+### Option 2: Manual download
+1. Download and extract this repository
+2. Place the folder as `blocks/ranking` in your Moodle installation
+3. Visit **Site administration > Notifications** to complete the installation
+
+### Upgrading from the original plugin
+If you have the original `block_ranking` installed, this fork is a **drop-in replacement**. The upgrade process will:
+- Add database indexes (non-destructive)
+- Existing data is fully preserved
+- New cache definitions and message providers registered automatically
+
+## Configuration
+
+After installation:
+
+1. **Add the block** to any course page
+2. **Configure settings** at *Site administration > Plugins > Blocks > Ranking block*:
+   - **Student roles**: Select which roles count as "students" for the ranking
+   - **Points per activity type**: Configure points for resources, assignments, forums, pages, workshops, quizzes, lessons, SCORM, URLs, and a default for other types
+   - **Grade multiplier**: Scale grade-based bonus points (default: 1.0)
+   - **Ranking size**: Number of students shown in the block
+   - **Multiple quiz attempts**: Whether repeated quiz attempts earn additional points
+
+### Enabling completion tracking
+1. Go to *Site administration > Advanced features*
+2. Enable **Completion tracking**
+3. Inside each course: *Course settings > Completion tracking* = Yes
+4. Configure completion criteria for individual activities
+
+## Features
+
+- **General ranking** -- all-time leaderboard
+- **Weekly ranking** -- resets each week for ongoing motivation
+- **Monthly ranking** -- monthly leaderboard
+- **Group support** -- filter rankings by course groups
+- **Full report** -- top 100 students with period filter, CSV export, and evolution chart
+- **Group graphs** -- visual charts for group points, averages, and weekly evolution
+- **Web service API** -- 3 endpoints registered with Moodle Mobile service
+- **Configurable student roles** -- no longer hardcoded to role ID 5
+- **Notifications** -- Moodle messaging for top 3 achievements
+- **Custom events** -- `points_awarded` event for plugin integration
+- **Auto-refresh** -- AJAX-based live ranking updates
+- **GDPR compliant** -- full Privacy API implementation
+- **Cached** -- MUC integration for high-traffic courses
+
+## For developers
+
+### Integration with other plugins
+
+Other plugins can observe the `\block_ranking\event\points_awarded` event:
+
+```php
+// In your plugin's db/events.php:
+$observers = [
+    [
+        'eventname' => '\block_ranking\event\points_awarded',
+        'callback' => '\local_yourplugin\observer::ranking_points_awarded',
+    ],
+];
+```
+
+The event's `other` array contains `points` (awarded this time) and `totalpoints` (accumulated total).
+
+### Building AMD modules
+
+From the Moodle root directory:
+```bash
+npx grunt amd --root=blocks/ranking
+```
+
+## License
+
+This plugin is licensed under the [GNU GPL v3 or later](http://www.gnu.org/copyleft/gpl.html).
+
+Original work copyright 2017 Willian Mano (http://conecti.me).

@@ -27,6 +27,27 @@ defined('MOODLE_INTERNAL') || die;
 
 if ($ADMIN->fulltree) {
 
+    // Student roles multi-select setting.
+    $roles = role_get_names(null, ROLENAME_ORIGINAL);
+    $roleoptions = [];
+    $defaultroles = [];
+    foreach ($roles as $role) {
+        $roleoptions[$role->id] = $role->localname;
+    }
+    // Default: all roles with 'student' archetype (configmulticheckbox expects key => 1 format).
+    $studentarchetyperoles = get_archetype_roles('student');
+    foreach ($studentarchetyperoles as $role) {
+        $defaultroles[$role->id] = 1;
+    }
+
+    $settings->add(new admin_setting_configmulticheckbox(
+        'block_ranking/student_roles',
+        get_string('student_roles', 'block_ranking'),
+        get_string('student_roles_help', 'block_ranking'),
+        $defaultroles,
+        $roleoptions
+    ));
+
     $settings->add(new admin_setting_configtext('block_ranking/rankingsize', get_string('rankingsize', 'block_ranking'),
         get_string('rankingsize_help', 'block_ranking'), 10, PARAM_INT));
 
@@ -45,8 +66,25 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configtext('block_ranking/workshoppoints', get_string('workshoppoints', 'block_ranking'),
         '', 2, PARAM_INT));
 
+    $settings->add(new admin_setting_configtext('block_ranking/quizpoints', get_string('quizpoints', 'block_ranking'),
+        '', 2, PARAM_INT));
+
+    $settings->add(new admin_setting_configtext('block_ranking/lessonpoints', get_string('lessonpoints', 'block_ranking'),
+        '', 2, PARAM_INT));
+
+    $settings->add(new admin_setting_configtext('block_ranking/scormpoints', get_string('scormpoints', 'block_ranking'),
+        '', 2, PARAM_INT));
+
+    $settings->add(new admin_setting_configtext('block_ranking/urlpoints', get_string('urlpoints', 'block_ranking'),
+        '', 2, PARAM_INT));
+
     $settings->add(new admin_setting_configtext('block_ranking/defaultpoints', get_string('defaultpoints', 'block_ranking'),
         '', 2, PARAM_INT));
+
+    $settings->add(new admin_setting_configtext('block_ranking/grade_multiplier',
+        get_string('grade_multiplier', 'block_ranking'),
+        get_string('grade_multiplier_help', 'block_ranking'),
+        '1', PARAM_RAW));
 
     $settings->add(new admin_setting_configselect(
                     'block_ranking/enable_multiple_quizz_attempts',

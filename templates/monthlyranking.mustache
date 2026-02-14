@@ -1,18 +1,14 @@
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th scope="col">{{#str}}table_position, block_ranking{{/str}}</th>
-            <th scope="col">{{#str}}table_name, block_ranking{{/str}}</th>
-            <th scope="col">{{#str}}table_points, block_ranking{{/str}}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {{#monthlyranking}}
-            <tr class="{{{class}}}">
-                <th scope="row">{{{position}}}</th>
-                <td>{{{userpic}}} {{firstname}}</td>
-                <td>{{points}}</td>
-            </tr>
-        {{/monthlyranking}}
-    </tbody>
-</table>
+{{!
+    @template block_ranking/monthlyranking
+
+    Monthly ranking tab content.
+    Context: monthlyranking array from block output class.
+}}
+<ul class="ranking-list" data-ranking-type="monthly">
+    {{#monthlyranking}}
+        {{> block_ranking/ranking_list }}
+    {{/monthlyranking}}
+    {{^monthlyranking}}
+        <li class="ranking-empty">{{#str}}nostudents, block_ranking{{/str}}</li>
+    {{/monthlyranking}}
+</ul>

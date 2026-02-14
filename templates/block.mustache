@@ -1,12 +1,30 @@
+{{!
+    @template block_ranking/block
+
+    Main ranking block template with tabbed interface.
+    Uses Bootstrap 5 tab navigation (data-bs-toggle).
+
+    Context variables:
+    - generalranking (array)
+    - weeklyranking (array)
+    - monthlyranking (array)
+    - studentdata (object, optional): generalpoints, weeklypoints, monthlypoints
+}}
 <ul class="nav nav-tabs" id="ranking-tab" role="tablist">
-    <li class="nav-item">
-        <a class="nav-link active" id="general-tab" data-toggle="tab" href="#general" role="tab" aria-controls="general" aria-selected="true">{{#str}}general, block_ranking{{/str}}</a>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general" data-toggle="tab" href="#general" role="tab" aria-controls="general" aria-selected="true">
+            {{#str}}general, block_ranking{{/str}}
+        </button>
     </li>
-    <li class="nav-item">
-        <a class="nav-link" id="weekly-tab" data-toggle="tab" href="#weekly" role="tab" aria-controls="weekly" aria-selected="false">{{#str}}weekly, block_ranking{{/str}}</a>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="weekly-tab" data-bs-toggle="tab" data-bs-target="#weekly" data-toggle="tab" href="#weekly" role="tab" aria-controls="weekly" aria-selected="false">
+            {{#str}}weekly, block_ranking{{/str}}
+        </button>
     </li>
-    <li class="nav-item">
-        <a class="nav-link" id="monthly-tab" data-toggle="tab" href="#monthly" role="tab" aria-controls="monthly" aria-selected="false">{{#str}}monthly, block_ranking{{/str}}</a>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="monthly-tab" data-bs-toggle="tab" data-bs-target="#monthly" data-toggle="tab" href="#monthly" role="tab" aria-controls="monthly" aria-selected="false">
+            {{#str}}monthly, block_ranking{{/str}}
+        </button>
     </li>
 </ul>
 <div class="tab-content" id="ranking-tab-content">
@@ -22,21 +40,21 @@
 </div>
 
 {{#studentdata}}
-    <h6>{{#str}}your_score, block_ranking{{/str}}</h6>
-    <table class="table">
-        <thead class="thead-dark">
-        <tr>
-            <th>{{#str}}general, block_ranking{{/str}}</th>
-            <th>{{#str}}weekly, block_ranking{{/str}}</th>
-            <th>{{#str}}monthly, block_ranking{{/str}}</th>
-        </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <th>{{{studentdata.generalpoints}}}</th>
-                <td>{{{studentdata.weeklypoints}}}</td>
-                <td>{{{studentdata.monthlypoints}}}</td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="ranking-your-score">
+        <h6>{{#str}}your_score, block_ranking{{/str}}</h6>
+        <div class="ranking-score-grid">
+            <div class="ranking-score-item">
+                <span class="ranking-score-value">{{{studentdata.generalpoints}}}</span>
+                <span class="ranking-score-label">{{#str}}general, block_ranking{{/str}}</span>
+            </div>
+            <div class="ranking-score-item">
+                <span class="ranking-score-value">{{{studentdata.weeklypoints}}}</span>
+                <span class="ranking-score-label">{{#str}}weekly, block_ranking{{/str}}</span>
+            </div>
+            <div class="ranking-score-item">
+                <span class="ranking-score-value">{{{studentdata.monthlypoints}}}</span>
+                <span class="ranking-score-label">{{#str}}monthly, block_ranking{{/str}}</span>
+            </div>
+        </div>
+    </div>
 {{/studentdata}}

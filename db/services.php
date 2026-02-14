@@ -15,7 +15,6 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- *
  * Ranking external functions and service definitions.
  *
  * @package    block_ranking
@@ -29,10 +28,23 @@ defined('MOODLE_INTERNAL') || die();
 $functions = [
     'block_ranking_get_ranking' => [
         'classname' => 'block_ranking\external\ranking',
-        'classpath'   => 'blocks/ranking/classes/external/ranking.php',
         'methodname' => 'get_ranking',
         'description' => 'Returns a list of students and rank.',
         'type' => 'read',
-        'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE]
-    ]
+        'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],
+    ],
+    'block_ranking_get_user_position' => [
+        'classname' => 'block_ranking\external\get_user_position',
+        'methodname' => 'execute',
+        'description' => 'Returns the current user ranking position and points in a course.',
+        'type' => 'read',
+        'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],
+    ],
+    'block_ranking_get_user_points_history' => [
+        'classname' => 'block_ranking\external\get_user_points_history',
+        'methodname' => 'execute',
+        'description' => 'Returns the points history (log) for a user in a course.',
+        'type' => 'read',
+        'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],
+    ],
 ];

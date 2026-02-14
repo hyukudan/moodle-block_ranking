@@ -1,18 +1,16 @@
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th scope="col">{{#str}}table_position, block_ranking{{/str}}</th>
-            <th scope="col">{{#str}}table_name, block_ranking{{/str}}</th>
-            <th scope="col">{{#str}}table_points, block_ranking{{/str}}</th>
-        </tr>
-    </thead>
-    <tbody>
+{{!
+    @template block_ranking/report
+
+    Full ranking report page template.
+    Context: students array from report output class.
+}}
+<div class="ranking-report-table">
+    <ul class="ranking-list">
         {{#students}}
-            <tr class="{{{class}}}">
-                <th scope="row">{{{position}}}</th>
-                <td>{{{userpic}}} {{firstname}}</td>
-                <td>{{points}}</td>
-            </tr>
+            {{> block_ranking/ranking_list }}
         {{/students}}
-    </tbody>
-</table>
+        {{^students}}
+            <li class="ranking-empty">{{#str}}nostudents, block_ranking{{/str}}</li>
+        {{/students}}
+    </ul>
+</div>

@@ -58,10 +58,10 @@ function block_ranking_get_total_students_by_group() {
 
     $sql = "SELECT
             g.name as groupname, count(g.name) as qtd
-            FROM mdl_ranking_points rp
-            INNER JOIN mdl_user u ON u.id = rp.userid
-            INNER JOIN mdl_groups_members gm ON gm.userid = rp.userid
-            INNER JOIN mdl_groups g ON g.id = gm.groupid
+            FROM {ranking_points} rp
+            INNER JOIN {user} u ON u.id = rp.userid
+            INNER JOIN {groups_members} gm ON gm.userid = rp.userid
+            INNER JOIN {groups} g ON g.id = gm.groupid
             WHERE rp.courseid = :courseid
             GROUP BY g.name";
 

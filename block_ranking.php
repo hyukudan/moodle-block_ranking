@@ -101,6 +101,9 @@ class block_ranking extends block_base {
         $footerrenderable = new \block_ranking\output\block_footer($this->page->course->id);
         $this->content->footer = $renderer->render($footerrenderable);
 
+        // Load AMD module for auto-refresh and animations.
+        $this->page->requires->js_call_amd('block_ranking/ranking', 'init', [$this->page->course->id]);
+
         return $this->content;
     }
 

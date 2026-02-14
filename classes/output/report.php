@@ -37,25 +37,26 @@ use renderer_base;
  */
 class report implements renderable, templatable {
 
-    /**
-     * @var int $rankingsize The ranking size.
-     */
+    /** @var int $rankingsize The ranking size. */
     protected $rankingsize;
 
-    /**
-     * @var int $group The moodle group.
-     */
+    /** @var int|null $group The moodle group. */
     protected $group;
+
+    /** @var string $period Period filter: 'all', 'weekly', 'monthly'. */
+    protected $period;
 
     /**
      * Block constructor.
      *
      * @param int $rankingsize
-     * @param int $group
+     * @param int|null $group
+     * @param string $period
      */
-    public function __construct($rankingsize = 100, $group = null) {
+    public function __construct($rankingsize = 100, $group = null, $period = 'all') {
         $this->rankingsize = $rankingsize;
         $this->group = $group;
+        $this->period = $period;
     }
 
     /**
@@ -66,16 +67,23 @@ class report implements renderable, templatable {
      * @return array|\stdClass
      *
      * @throws \coding_exception
-     *
      * @throws \dml_exception
      */
     public function export_for_template(renderer_base $output) {
         $rankinglib = new rankinglib();
 
-        $students = $rankinglib->get_students($this->rankingsize, $this->group);
+        if ($this->period === 'weekly') {
+            $datestart = strtotime(date('d-m-Y', strtotime('-' . date('w') . ' days')));
+            $students = $rankinglib->get_students_by_date($datestart, time(), $this->rankingsize);
+        } else if ($this->period === 'monthly') {
+            $datestart = strtotime(date('Y-m-01'));
+            $students = $rankinglib->get_students_by_date($datestart, time(), $this->rankingsize);
+        } else {
+            $students = $rankinglib->get_students($this->rankingsize, $this->group);
+        }
 
         return [
-            'students' => $students
+            'students' => is_array($students) ? $students : [],
         ];
     }
 }

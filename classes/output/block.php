@@ -68,18 +68,25 @@ class block implements renderable, templatable {
         $weekstart = strtotime(date('d-m-Y', strtotime('-'.date('w').' days')));
         $monthstart = strtotime(date('Y-m-01'));
 
+        $general = $rankinglib->get_students($this->rankingsize);
+        $weekly = $rankinglib->get_students_by_date($weekstart, time(), $this->rankingsize);
+        $monthly = $rankinglib->get_students_by_date($monthstart, time(), $this->rankingsize);
+
         $returndata = [
-            'generalranking' => $rankinglib->get_students($this->rankingsize),
-            'weeklyranking' => $rankinglib->get_students_by_date($weekstart, time(), $this->rankingsize),
-            'monthlyranking' => $rankinglib->get_students_by_date($monthstart, time(), $this->rankingsize)
+            'generalranking' => is_array($general) ? $general : [],
+            'weeklyranking' => is_array($weekly) ? $weekly : [],
+            'monthlyranking' => is_array($monthly) ? $monthly : [],
         ];
 
         $studentlib = new studentlib();
         if ($studentlib->is_student()) {
+            $gpoints = $studentlib->get_total_course_points();
+            $wpoints = $studentlib->get_student_points_by_date($weekstart, time());
+            $mpoints = $studentlib->get_student_points_by_date($monthstart, time());
             $returndata['studentdata'] = [
-                'generalpoints' => $studentlib->get_total_course_points(),
-                'weeklypoints' => $studentlib->get_student_points_by_date($weekstart, time()),
-                'monthlypoints' => $studentlib->get_student_points_by_date($monthstart, time())
+                'generalpoints' => $gpoints ?: 0,
+                'weeklypoints' => $wpoints ?: 0,
+                'monthlypoints' => $mpoints ?: 0,
             ];
         }
 

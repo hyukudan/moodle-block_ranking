@@ -35,6 +35,8 @@ use core_external\external_warnings;
 
 require_once($CFG->dirroot.'/blocks/ranking/lib.php');
 
+use block_ranking\block_ranking_helper;
+
 /**
  * Ranking external functions and service definitions class
  *
@@ -87,6 +89,13 @@ class ranking extends external_api {
                 $perpage = 100;
                 $group = null;
 
+                $roleids = block_ranking_helper::get_student_role_ids();
+                if (empty($roleids)) {
+                    continue;
+                }
+
+                list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+
                 $userfields = \user_picture::fields('u', ['username']);
                 $from = "FROM {user} u
                         INNER JOIN {role_assignments} a ON a.userid = u.id
@@ -95,13 +104,14 @@ class ranking extends external_api {
 
                 $where = "WHERE a.contextid = :contextid
                         AND a.userid = u.id
-                        AND a.roleid = :roleid
+                        AND a.roleid $rolesql
                         AND c.instanceid = :courseid";
 
-                $params['contextid'] = $context->id;
-                $params['roleid'] = 5;
-                $params['courseid'] = $course->id;
-                $params['r_courseid'] = $params['courseid'];
+                $params = array_merge($roleparams, [
+                    'contextid' => $context->id,
+                    'courseid' => $course->id,
+                    'r_courseid' => $course->id,
+                ]);
 
                 $order = "ORDER BY r.points DESC, u.firstname ASC";
 

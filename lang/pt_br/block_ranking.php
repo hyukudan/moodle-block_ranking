@@ -42,8 +42,8 @@ $string['graph_groups'] = 'Gráfico de pontos por grupo';
 $string['graph_group_evolution'] = 'Gráficos da evolução dos pontos do grupo';
 $string['graph_group_evolution_title'] = 'Gráficos da evolução dos pontos do grupo na última semana';
 $string['graph_groups_avg'] = 'Gráficos de média de pontos por grupo';
-$stirng['graph_access_deny'] = 'Você não tem permissão de visualizar os grupos do curso para ver este relatório.';
-$stirng['graph_no_groups'] = 'Este curso não possui grupos para poder visualizar os relatórios.';
+$string['graph_access_deny'] = 'Você não tem permissão de visualizar os grupos do curso para ver este relatório.';
+$string['graph_no_groups'] = 'Este curso não possui grupos para poder visualizar os relatórios.';
 
 $string['report_title'] = '{$a} : Ranking geral dos estudantes';
 $string['report_head'] = 'Detalhes do ranking: Primeiros {$a} estudantes';
@@ -70,3 +70,20 @@ $string['no'] = 'Não';
 
 $string['enable_multiple_quizz_attempts'] = 'Habilitar mútiplas tentativas no quizz';
 $string['enable_multiple_quizz_attempts_help'] = 'Possibilita que os estudantes ganhem pontos em todas as tentativa no quizz. Se essa opção for marcada como não, o estudante só receberá os pontos da primeira tentativa.';
+
+$string['student_roles'] = 'Roles de estudante';
+$string['student_roles_help'] = 'Selecione quais roles devem ser considerados como estudantes para o ranking. Usuários com esses roles receberão pontos e aparecerão na tabela de classificação.';
+
+// Privacy API.
+$string['privacy:metadata:ranking_points'] = 'Armazena os pontos de ranking do usuário por curso.';
+$string['privacy:metadata:ranking_points:userid'] = 'O ID do usuário.';
+$string['privacy:metadata:ranking_points:courseid'] = 'O ID do curso.';
+$string['privacy:metadata:ranking_points:points'] = 'O total de pontos acumulados pelo usuário.';
+$string['privacy:metadata:ranking_points:timecreated'] = 'A hora em que o registro foi criado.';
+$string['privacy:metadata:ranking_points:timemodified'] = 'A hora da última modificação do registro.';
+$string['privacy:metadata:ranking_logs'] = 'Armazena transações individuais de pontos para o ranking.';
+$string['privacy:metadata:ranking_logs:rankingid'] = 'O ID do registro de pontos de ranking associado.';
+$string['privacy:metadata:ranking_logs:courseid'] = 'O ID do curso.';
+$string['privacy:metadata:ranking_logs:course_modules_completion'] = 'O ID da conclusão do módulo do curso que gerou esta entrada.';
+$string['privacy:metadata:ranking_logs:points'] = 'Os pontos concedidos nesta transação.';
+$string['privacy:metadata:ranking_logs:timecreated'] = 'A hora em que os pontos foram concedidos.';

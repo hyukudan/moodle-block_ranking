@@ -1,0 +1,248 @@
+/* block_ranking styles - Moodle auto-loads this file */
+
+/* ── Tabs ─────────────────────────────────────────── */
+.block_ranking .nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+    margin-bottom: 0;
+}
+.block_ranking .nav-tabs .nav-link {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.4rem 0.8rem;
+    border: none;
+    color: #6c757d;
+    transition: color 0.2s;
+}
+.block_ranking .nav-tabs .nav-link.active {
+    color: #0d6efd;
+    border-bottom: 2px solid #0d6efd;
+    background: transparent;
+}
+
+/* ── Ranking list ─────────────────────────────────── */
+.block_ranking .ranking-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.block_ranking .ranking-item {
+    display: flex;
+    align-items: center;
+    padding: 0.45rem 0.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    gap: 0.5rem;
+}
+.block_ranking .ranking-item:last-child {
+    border-bottom: none;
+}
+.block_ranking .ranking-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* ── Self highlight ───────────────────────────────── */
+.block_ranking .ranking-row-self {
+    background: linear-gradient(90deg, #e8f4fd 0%, #f0f7ff 100%);
+    border-left: 3px solid #0d6efd;
+    border-radius: 4px;
+}
+
+/* ── Position badge ───────────────────────────────── */
+.block_ranking .ranking-position {
+    min-width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+    background: #e9ecef;
+    color: #495057;
+}
+.block_ranking .ranking-position.gold {
+    background: linear-gradient(135deg, #f7d774 0%, #e6b422 100%);
+    color: #6b4e00;
+    box-shadow: 0 2px 6px rgba(230, 180, 34, 0.35);
+}
+.block_ranking .ranking-position.silver {
+    background: linear-gradient(135deg, #e0e0e0 0%, #b0b0b0 100%);
+    color: #444;
+    box-shadow: 0 2px 6px rgba(160, 160, 160, 0.35);
+}
+.block_ranking .ranking-position.bronze {
+    background: linear-gradient(135deg, #e8b88a 0%, #cd7f32 100%);
+    color: #5a3410;
+    box-shadow: 0 2px 6px rgba(205, 127, 50, 0.35);
+}
+
+/* ── Avatar ───────────────────────────────────────── */
+.block_ranking .ranking-avatar {
+    flex-shrink: 0;
+}
+.block_ranking .ranking-avatar img {
+    border-radius: 50% !important;
+    width: 35px;
+    height: 35px;
+    object-fit: cover;
+}
+
+/* ── User info ────────────────────────────────────── */
+.block_ranking .ranking-user-info {
+    flex: 1;
+    min-width: 0;
+}
+.block_ranking .ranking-username {
+    font-size: 0.82rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+.block_ranking .ranking-progress {
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+    margin-top: 3px;
+    overflow: hidden;
+}
+.block_ranking .ranking-progress-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+    background: linear-gradient(90deg, #0d6efd, #6ea8fe);
+}
+.block_ranking .ranking-position.gold ~ .ranking-user-info .ranking-progress-bar {
+    background: linear-gradient(90deg, #e6b422, #f7d774);
+}
+.block_ranking .ranking-position.silver ~ .ranking-user-info .ranking-progress-bar {
+    background: linear-gradient(90deg, #b0b0b0, #d4d4d4);
+}
+.block_ranking .ranking-position.bronze ~ .ranking-user-info .ranking-progress-bar {
+    background: linear-gradient(90deg, #cd7f32, #e8b88a);
+}
+
+/* ── Points ───────────────────────────────────────── */
+.block_ranking .ranking-points {
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: #495057;
+    flex-shrink: 0;
+    text-align: right;
+    min-width: 40px;
+}
+.block_ranking .ranking-item.ranking-row-self .ranking-points {
+    color: #0d6efd;
+}
+
+/* ── Your score card ──────────────────────────────── */
+.block_ranking .ranking-your-score {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.6rem;
+    margin-top: 0.6rem;
+}
+.block_ranking .ranking-your-score h6 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6c757d;
+    margin-bottom: 0.4rem;
+}
+.block_ranking .ranking-score-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    text-align: center;
+}
+.block_ranking .ranking-score-item {
+    background: #fff;
+    border-radius: 6px;
+    padding: 0.35rem 0.25rem;
+}
+.block_ranking .ranking-score-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #212529;
+    display: block;
+}
+.block_ranking .ranking-score-label {
+    font-size: 0.65rem;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+
+/* ── Footer buttons ───────────────────────────────── */
+.block_ranking .ranking-footer {
+    display: flex;
+    gap: 0.4rem;
+    padding-top: 0.3rem;
+}
+.block_ranking .ranking-footer .btn {
+    flex: 1;
+    font-size: 0.78rem;
+    padding: 0.3rem 0.5rem;
+}
+
+/* ── Report page ──────────────────────────────────── */
+.ranking-report .ranking-report-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.ranking-report .ranking-report-table .ranking-item {
+    padding: 0.6rem 0.75rem;
+}
+.ranking-report .ranking-report-table .ranking-avatar img {
+    width: 40px;
+    height: 40px;
+}
+.ranking-report .ranking-report-table .ranking-username {
+    font-size: 0.9rem;
+}
+.ranking-report .ranking-report-table .ranking-points {
+    font-size: 0.9rem;
+}
+
+/* ── Empty state ──────────────────────────────────── */
+.block_ranking .ranking-empty {
+    text-align: center;
+    padding: 1.5rem 0.5rem;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+/* ── Medal emoji (fallback for no-icon envs) ──────── */
+.block_ranking .ranking-medal {
+    font-size: 0.7rem;
+    margin-left: 2px;
+}
+
+/* ── Animations ───────────────────────────────────── */
+@keyframes ranking-fadein {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.block_ranking .ranking-item {
+    animation: ranking-fadein 0.3s ease forwards;
+}
+.block_ranking .ranking-item:nth-child(1) { animation-delay: 0s; }
+.block_ranking .ranking-item:nth-child(2) { animation-delay: 0.04s; }
+.block_ranking .ranking-item:nth-child(3) { animation-delay: 0.08s; }
+.block_ranking .ranking-item:nth-child(4) { animation-delay: 0.12s; }
+.block_ranking .ranking-item:nth-child(5) { animation-delay: 0.16s; }
+
+/* ── Responsive ───────────────────────────────────── */
+@media (max-width: 480px) {
+    .block_ranking .ranking-score-grid {
+        grid-template-columns: 1fr;
+    }
+    .block_ranking .ranking-avatar img {
+        width: 28px;
+        height: 28px;
+    }
+}

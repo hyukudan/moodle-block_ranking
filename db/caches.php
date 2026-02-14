@@ -14,19 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 /**
- * Ranking block version details
+ * Cache definitions for block_ranking.
  *
  * @package    block_ranking
- * @copyright  2017 Willian Mano http://conecti.me
+ * @copyright  2024 Willian Mano http://conecti.me
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026021400;
-$plugin->requires  = 2024100700;
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'Version for Moodle 4.5+ with security fixes, caching, and GDPR compliance';
-$plugin->component = 'block_ranking';
+$definitions = [
+    'course_ranking' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'simpledata' => false,
+        'ttl' => 300, // 5 minutes.
+    ],
+    'user_points' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'simpledata' => true,
+        'ttl' => 300, // 5 minutes.
+    ],
+];

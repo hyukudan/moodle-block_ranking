@@ -14,19 +14,21 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 /**
- * Ranking block version details
+ * Messaging provider definitions for block_ranking.
  *
  * @package    block_ranking
- * @copyright  2017 Willian Mano http://conecti.me
+ * @copyright  2024 block_ranking contributors
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026021400;
-$plugin->requires  = 2024100700;
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'Version for Moodle 4.5+ with security fixes, caching, and GDPR compliance';
-$plugin->component = 'block_ranking';
+$messageproviders = [
+    'ranking_update' => [
+        'defaults' => [
+            'popup' => MESSAGE_PERMITTED + MESSAGE_DEFAULT_ENABLED,
+            'email' => MESSAGE_PERMITTED,
+        ],
+    ],
+];

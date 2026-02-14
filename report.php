@@ -27,8 +27,10 @@ require(__DIR__ . '/../../config.php');
 define('DEFAULT_PAGE_SIZE', 100);
 
 $courseid = required_param('courseid', PARAM_INT);
-$perpage = optional_param('perpage', DEFAULT_PAGE_SIZE, PARAM_INT); // How many per page.
+$perpage = optional_param('perpage', DEFAULT_PAGE_SIZE, PARAM_INT);
 $group = optional_param('group', null, PARAM_INT);
+$period = optional_param('period', 'all', PARAM_ALPHA);
+$format = optional_param('format', '', PARAM_ALPHA);
 
 $course = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
 
@@ -45,7 +47,41 @@ if ($group) {
     $params['group'] = $group;
 }
 
+if ($period !== 'all') {
+    $params['period'] = $period;
+}
+
 $url = new moodle_url('/blocks/ranking/report.php', $params);
+
+// Handle CSV export.
+if ($format === 'csv') {
+    $renderable = new \block_ranking\output\report($perpage, $group, $period);
+    $renderer = $PAGE->get_renderer('block_ranking');
+    $data = $renderable->export_for_template($renderer);
+
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="ranking_' . $course->shortname . '_' . $period . '.csv"');
+
+    $out = fopen('php://output', 'w');
+    fputcsv($out, [
+        get_string('table_position', 'block_ranking'),
+        get_string('table_name', 'block_ranking'),
+        get_string('table_points', 'block_ranking'),
+    ]);
+
+    if (!empty($data['students'])) {
+        foreach ($data['students'] as $student) {
+            fputcsv($out, [
+                $student->position,
+                $student->fullname,
+                $student->points,
+            ]);
+        }
+    }
+
+    fclose($out);
+    exit;
+}
 
 // Page info.
 $PAGE->set_url($url);
@@ -63,6 +99,7 @@ $output = $PAGE->get_renderer('block_ranking');
 echo $output->header();
 echo $output->container_start('ranking-report');
 
+// Group selector.
 if (has_capability('moodle/course:managegroups', $context)) {
     $groups = groups_get_all_groups($course->id);
     if (!empty($groups)) {
@@ -70,10 +107,65 @@ if (has_capability('moodle/course:managegroups', $context)) {
     }
 }
 
-$renderable = new \block_ranking\output\report($perpage, $group);
+// Controls row: period filter + CSV export.
+echo html_writer::start_div('ranking-report-controls');
 
+$periodtypes = [
+    'all' => get_string('filter_all', 'block_ranking'),
+    'weekly' => get_string('weekly', 'block_ranking'),
+    'monthly' => get_string('monthly', 'block_ranking'),
+];
+
+$periodurl = new moodle_url('/blocks/ranking/report.php', ['courseid' => $courseid, 'perpage' => $perpage]);
+if ($group) {
+    $periodurl->param('group', $group);
+}
+
+$select = new single_select($periodurl, 'period', $periodtypes, $period, null, 'periodselect');
+$select->label = get_string('filter_period', 'block_ranking');
+echo $output->render($select);
+
+$csvurl = new moodle_url('/blocks/ranking/report.php', array_merge($params, ['format' => 'csv']));
+echo html_writer::link($csvurl, get_string('export_csv', 'block_ranking'), [
+    'class' => 'btn btn-sm btn-outline-secondary',
+]);
+
+echo html_writer::end_div();
+
+// Ranking table.
+$renderable = new \block_ranking\output\report($perpage, $group, $period);
 echo $output->render($renderable);
 
-echo $output->container_end();
+// Points evolution chart (only for all-time view).
+if ($period === 'all') {
+    $sql = "SELECT DATE(FROM_UNIXTIME(rl.timecreated)) as logdate,
+                   SUM(rl.points) as totalpoints
+              FROM {ranking_logs} rl
+             WHERE rl.courseid = :courseid
+             GROUP BY DATE(FROM_UNIXTIME(rl.timecreated))
+             ORDER BY logdate ASC";
 
+    $records = $DB->get_records_sql($sql, ['courseid' => $courseid]);
+
+    if (count($records) >= 2) {
+        $labels = [];
+        $values = [];
+        foreach ($records as $record) {
+            $labels[] = $record->logdate;
+            $values[] = (float) $record->totalpoints;
+        }
+
+        echo $output->heading(get_string('points_evolution', 'block_ranking'), 4, 'mt-4');
+
+        $chart = new \core\chart_line();
+        $chart->set_smooth(true);
+        $series = new \core\chart_series(get_string('table_points', 'block_ranking'), $values);
+        $chart->add_series($series);
+        $chart->set_labels($labels);
+
+        echo $output->render($chart);
+    }
+}
+
+echo $output->container_end();
 echo $output->footer();

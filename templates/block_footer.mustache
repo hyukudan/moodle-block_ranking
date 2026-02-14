@@ -1,3 +1,11 @@
-{{#footerbuttons}}
-    <a class="btn btn-default btn-block" href="{{{url}}}">{{{title}}}</a>
-{{/footerbuttons}}
+{{!
+    @template block_ranking/block_footer
+
+    Block footer with action buttons.
+    Context: footerbuttons array with title and url.
+}}
+<div class="ranking-footer">
+    {{#footerbuttons}}
+        <a class="btn btn-sm btn-outline-primary" href="{{{url}}}">{{{title}}}</a>
+    {{/footerbuttons}}
+</div>

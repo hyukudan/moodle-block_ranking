@@ -55,31 +55,21 @@ class block_ranking_manager {
 
         $usercompletion = self::get_module_completion($cmcid);
 
-        switch ($usercompletion->modulename) {
-            case 'assign':
-                self::add_default_points($usercompletion, self::get_config('assignpoints'), $grade);
-            break;
+        // Map activity type to its config key; fall back to defaultpoints.
+        $pointsmap = [
+            'assign' => 'assignpoints',
+            'resource' => 'resourcepoints',
+            'forum' => 'forumpoints',
+            'workshop' => 'workshoppoints',
+            'page' => 'pagepoints',
+            'quiz' => 'quizpoints',
+            'lesson' => 'lessonpoints',
+            'scorm' => 'scormpoints',
+            'url' => 'urlpoints',
+        ];
 
-            case 'resource':
-                self::add_default_points($usercompletion, self::get_config('resourcepoints'), $grade);
-            break;
-
-            case 'forum':
-                self::add_default_points($usercompletion, self::get_config('forumpoints'), $grade);
-            break;
-
-            case 'workshop':
-                self::add_default_points($usercompletion, self::get_config('workshoppoints'), $grade);
-            break;
-
-            case 'page':
-                self::add_default_points($usercompletion, self::get_config('pagepoints'), $grade);
-            break;
-
-            default:
-                self::add_default_points($usercompletion, self::get_config('defaultpoints'), $grade);
-            break;
-        }
+        $configkey = $pointsmap[$usercompletion->modulename] ?? 'defaultpoints';
+        self::add_default_points($usercompletion, self::get_config($configkey), $grade);
     }
 
     /**
@@ -124,9 +114,15 @@ class block_ranking_manager {
      * @return void
      */
     protected static function add_default_points($completion, $points = null, $grade = null) {
+        global $DB;
 
         if ((!isset($points)) || trim($points) == '') {
             $points = self::DEFAULT_POINTS;
+        }
+
+        $multiplier = (float) self::get_config('grade_multiplier');
+        if ($multiplier <= 0) {
+            $multiplier = 1.0;
         }
 
         if (!empty($grade)) {
@@ -134,18 +130,86 @@ class block_ranking_manager {
                 $grade = $grade / 10;
             }
 
-            $points += $grade;
+            $points += ($grade * $multiplier);
         } else {
             $activitygrade = self::get_activity_finalgrade($completion->modulename, $completion->instance, $completion->userid);
 
             if ($activitygrade) {
-                $points += $activitygrade;
+                $points += ($activitygrade * $multiplier);
             }
         }
 
-        $rankingid = self::add_or_update_user_points($completion->userid, $completion->course, $points);
+        $transaction = $DB->start_delegated_transaction();
+        try {
+            $rankingid = self::add_or_update_user_points($completion->userid, $completion->course, $points);
+            self::add_ranking_log($rankingid, $completion->course, $completion->coursemoduleid, $points);
+            $transaction->allow_commit();
+        } catch (\Exception $e) {
+            $transaction->rollback($e);
+            return;
+        }
 
-        self::add_ranking_log($rankingid, $completion->course, $completion->coursemoduleid, $points);
+        // Invalidate ranking cache for this course.
+        rankinglib::invalidate_course_cache($completion->course);
+
+        // Fire custom event for integration with other plugins.
+        self::fire_points_awarded_event($completion->userid, $completion->course, $points, $rankingid);
+
+        // Check if user entered top 3 and send notification.
+        self::check_and_notify_ranking_change($completion->userid, $completion->course);
+    }
+
+    /**
+     * Check if a user's ranking changed and send notifications.
+     *
+     * @param int $userid
+     * @param int $courseid
+     */
+    protected static function check_and_notify_ranking_change($userid, $courseid) {
+        global $DB;
+
+        // Get the user's current position.
+        $sql = "SELECT COUNT(*) + 1 as position
+                  FROM {ranking_points}
+                 WHERE courseid = :courseid AND points > (
+                     SELECT points FROM {ranking_points}
+                      WHERE userid = :userid AND courseid = :crsid
+                 )";
+        $params = ['courseid' => $courseid, 'userid' => $userid, 'crsid' => $courseid];
+
+        $result = $DB->get_record_sql($sql, $params);
+        if ($result && $result->position <= 3) {
+            notification_manager::notify_top3($userid, $courseid);
+        }
+    }
+
+    /**
+     * Fire the points_awarded event for integration with other plugins.
+     *
+     * @param int $userid
+     * @param int $courseid
+     * @param float $points
+     * @param int $rankingid
+     */
+    protected static function fire_points_awarded_event($userid, $courseid, $points, $rankingid) {
+        global $DB;
+
+        $totalpoints = $DB->get_field('ranking_points', 'points', [
+            'userid' => $userid,
+            'courseid' => $courseid,
+        ]);
+
+        $event = event\points_awarded::create([
+            'context' => \context_course::instance($courseid),
+            'userid' => $userid,
+            'objectid' => $rankingid,
+            'courseid' => $courseid,
+            'other' => [
+                'points' => $points,
+                'totalpoints' => (float) $totalpoints,
+            ],
+        ]);
+        $event->trigger();
     }
 
     /**
@@ -236,7 +300,7 @@ class block_ranking_manager {
         // User dont have points yet.
         if (empty($userpoints)) {
             // Basic block configuration.
-            $userpoints = new stdClass();
+            $userpoints = new \stdClass();
             $userpoints->userid = $userid;
             $userpoints->courseid = $courseid;
             $userpoints->points = $points;
@@ -265,7 +329,7 @@ class block_ranking_manager {
     protected static function add_ranking_log($rankingid, $courseid, $cmc, $points) {
         global $DB;
 
-        $rankinglog = new stdClass();
+        $rankinglog = new \stdClass();
         $rankinglog->rankingid = $rankingid;
         $rankinglog->courseid = $courseid;
         $rankinglog->course_modules_completion = $cmc;

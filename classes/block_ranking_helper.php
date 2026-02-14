@@ -85,6 +85,28 @@ class block_ranking_helper {
     }
 
     /**
+     * Get the configured student role IDs.
+     *
+     * Returns the role IDs configured in the plugin settings, falling back
+     * to all roles with the 'student' archetype if not configured.
+     *
+     * @return array Array of role IDs
+     */
+    public static function get_student_role_ids() {
+        $config = get_config('block_ranking', 'student_roles');
+
+        if (!empty($config)) {
+            // configmulticheckbox stores as comma-separated string of role IDs.
+            $roleids = explode(',', $config);
+            return array_map('intval', array_filter($roleids));
+        }
+
+        // Fallback: use all roles with 'student' archetype.
+        $roles = get_archetype_roles('student');
+        return array_keys($roles);
+    }
+
+    /**
      * Verify if the user is a student
      *
      * @param int $userid
@@ -92,7 +114,21 @@ class block_ranking_helper {
      * @return boolean
      */
     protected static function is_student($userid) {
-        return user_has_role_assignment($userid, 5);
+        global $DB;
+
+        $roleids = self::get_student_role_ids();
+        if (empty($roleids)) {
+            return false;
+        }
+
+        list($insql, $params) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+        $params['userid'] = $userid;
+
+        $sql = "SELECT COUNT(1)
+                  FROM {role_assignments}
+                 WHERE userid = :userid AND roleid $insql";
+
+        return $DB->count_records_sql($sql, $params) > 0;
     }
 
     /**

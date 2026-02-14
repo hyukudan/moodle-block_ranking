@@ -1,0 +1,22 @@
+{{!
+    @template block_ranking/ranking_list
+
+    Single ranking item partial. Used inside {{#items}} iteration.
+    Expects to be called within a context that has position, userpic, fullname, points, etc.
+
+    Classes used: ranking-item, ranking-position, ranking-avatar, ranking-user-info,
+    ranking-username, ranking-progress, ranking-progress-bar, ranking-points
+}}
+<li class="ranking-item {{class}}">
+    <span class="ranking-position{{#isgold}} gold{{/isgold}}{{#issilver}} silver{{/issilver}}{{#isbronze}} bronze{{/isbronze}}">
+        {{{position}}}
+    </span>
+    <span class="ranking-avatar">{{{userpic}}}</span>
+    <div class="ranking-user-info">
+        <div class="ranking-username">{{{fullname}}}</div>
+        <div class="ranking-progress">
+            <div class="ranking-progress-bar" style="width: {{progresspct}}%"></div>
+        </div>
+    </div>
+    <span class="ranking-points">{{points}}</span>
+</li>
