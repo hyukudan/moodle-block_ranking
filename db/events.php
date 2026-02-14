@@ -28,12 +28,12 @@ defined('MOODLE_INTERNAL') || die();
 $observers = [
     [
         'eventname' => '\core\event\course_module_completion_updated',
-        'callback' => 'block_ranking_helper::observer',
+        'callback' => '\block_ranking\block_ranking_helper::observer',
         'internal' => false,
     ],
     [
         'eventname' => '\mod_quiz\event\attempt_submitted',
-        'callback' => 'block_ranking_helper::observer',
+        'callback' => '\block_ranking\block_ranking_helper::observer',
         'internal' => false,
     ],
 ];
