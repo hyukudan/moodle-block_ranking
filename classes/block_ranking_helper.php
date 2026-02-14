@@ -38,6 +38,26 @@ class block_ranking_helper {
      * @return void
      */
     public static function observer(\core\event\base $event) {
+        try {
+            self::process_event($event);
+        } catch (\Exception $e) {
+            debugging(
+                'block_ranking: Observer failed for event ' . $event->eventname .
+                ' (user=' . $event->relateduserid . ', course=' . $event->courseid . '): ' .
+                $e->getMessage(),
+                DEBUG_DEVELOPER
+            );
+            throw $e;
+        }
+    }
+
+    /**
+     * Process the event internally.
+     *
+     * @param \core\event\base $event The event.
+     * @return void
+     */
+    protected static function process_event(\core\event\base $event) {
         global $DB;
 
         if (!self::is_student($event->relateduserid)) {
@@ -64,11 +84,17 @@ class block_ranking_helper {
 
             $objectid = self::get_coursemodule_instance($event->contextinstanceid, $event->relateduserid);
 
-            if ($objectid) {
-                $grade = self::get_quiz_grade($event->objectid);
-
-                manager::add_user_points($objectid, $grade);
+            if (!$objectid) {
+                debugging(
+                    'block_ranking: Quiz completion not found or not completed for ' .
+                    'cmid=' . $event->contextinstanceid . ', userid=' . $event->relateduserid,
+                    DEBUG_DEVELOPER
+                );
+                return;
             }
+
+            $grade = self::get_quiz_grade($event->objectid);
+            manager::add_user_points($objectid, $grade);
 
             return;
         }

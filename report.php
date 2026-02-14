@@ -36,6 +36,7 @@ $course = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
 
 require_login($courseid);
 $context = context_course::instance($courseid);
+$PAGE->set_context($context);
 
 $params = ['courseid' => $courseid];
 
@@ -86,7 +87,6 @@ if ($format === 'csv') {
 
 // Page info.
 $PAGE->set_url($url);
-$PAGE->set_context($context);
 $PAGE->set_pagelayout('incourse');
 
 $title = get_string('report_title', 'block_ranking', $course->fullname);
@@ -139,22 +139,26 @@ echo $output->render($renderable);
 
 // Points evolution chart (only for all-time view).
 if ($period === 'all') {
-    $sql = "SELECT DATE(FROM_UNIXTIME(rl.timecreated)) as logdate,
-                   SUM(rl.points) as totalpoints
+    // Use cross-database query and group by date in PHP for portability.
+    $sql = "SELECT rl.id, rl.points, rl.timecreated
               FROM {ranking_logs} rl
              WHERE rl.courseid = :courseid
-             GROUP BY DATE(FROM_UNIXTIME(rl.timecreated))
-             ORDER BY logdate ASC";
+             ORDER BY rl.timecreated ASC";
 
     $records = $DB->get_records_sql($sql, ['courseid' => $courseid]);
 
-    if (count($records) >= 2) {
-        $labels = [];
-        $values = [];
-        foreach ($records as $record) {
-            $labels[] = $record->logdate;
-            $values[] = (float) $record->totalpoints;
+    $bydate = [];
+    foreach ($records as $record) {
+        $date = userdate($record->timecreated, '%Y-%m-%d');
+        if (!isset($bydate[$date])) {
+            $bydate[$date] = 0;
         }
+        $bydate[$date] += (float) $record->points;
+    }
+
+    if (count($bydate) >= 2) {
+        $labels = array_keys($bydate);
+        $values = array_values($bydate);
 
         echo $output->heading(get_string('points_evolution', 'block_ranking'), 4, 'mt-4');
 

@@ -192,9 +192,11 @@ class provider implements
 
         $courseid = $context->instanceid;
 
+        $transaction = $DB->start_delegated_transaction();
         // Delete logs first (they reference ranking_points via rankingid).
         $DB->delete_records('ranking_logs', ['courseid' => $courseid]);
         $DB->delete_records('ranking_points', ['courseid' => $courseid]);
+        $transaction->allow_commit();
     }
 
     /**
@@ -214,6 +216,8 @@ class provider implements
 
             $courseid = $context->instanceid;
 
+            $transaction = $DB->start_delegated_transaction();
+
             // Get ranking point IDs for this user/course to delete associated logs.
             $pointids = $DB->get_fieldset_select(
                 'ranking_points',
@@ -228,6 +232,7 @@ class provider implements
             }
 
             $DB->delete_records('ranking_points', ['userid' => $userid, 'courseid' => $courseid]);
+            $transaction->allow_commit();
         }
     }
 
@@ -252,6 +257,8 @@ class provider implements
             return;
         }
 
+        $transaction = $DB->start_delegated_transaction();
+
         list($usersql, $userparams) = $DB->get_in_or_equal($userids, SQL_PARAMS_NAMED);
 
         // Get ranking point IDs for these users in this course.
@@ -265,5 +272,6 @@ class provider implements
         }
 
         $DB->delete_records_select('ranking_points', "userid $usersql AND courseid = :courseid", $params);
+        $transaction->allow_commit();
     }
 }

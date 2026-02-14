@@ -44,6 +44,7 @@ class notification_manager {
 
         $course = $DB->get_record('course', ['id' => $courseid]);
         if (!$course) {
+            debugging('block_ranking: Cannot send top3 notification - course ' . $courseid . ' not found', DEBUG_DEVELOPER);
             return;
         }
 
@@ -62,7 +63,10 @@ class notification_manager {
         $message->contexturlname = $course->fullname;
         $message->courseid = $courseid;
 
-        message_send($message);
+        $result = message_send($message);
+        if (!$result) {
+            debugging('block_ranking: Failed to send top3 notification to user ' . $userid, DEBUG_DEVELOPER);
+        }
     }
 
     /**
@@ -79,6 +83,7 @@ class notification_manager {
         $course = $DB->get_record('course', ['id' => $courseid]);
         $overtaker = $DB->get_record('user', ['id' => $overtakenbyid]);
         if (!$course || !$overtaker) {
+            debugging('block_ranking: Cannot send overtaken notification - course or user not found', DEBUG_DEVELOPER);
             return;
         }
 
@@ -101,6 +106,9 @@ class notification_manager {
         $message->contexturlname = $course->fullname;
         $message->courseid = $courseid;
 
-        message_send($message);
+        $result = message_send($message);
+        if (!$result) {
+            debugging('block_ranking: Failed to send overtaken notification to user ' . $userid, DEBUG_DEVELOPER);
+        }
     }
 }

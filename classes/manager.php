@@ -174,6 +174,11 @@ class manager {
     protected static function check_and_notify_ranking_change($userid, $courseid) {
         global $DB;
 
+        // Verify user has a ranking record before querying position.
+        if (!$DB->record_exists('ranking_points', ['userid' => $userid, 'courseid' => $courseid])) {
+            return;
+        }
+
         // Get the user's current position.
         $sql = "SELECT COUNT(*) + 1 as position
                   FROM {ranking_points}
@@ -200,22 +205,30 @@ class manager {
     protected static function fire_points_awarded_event($userid, $courseid, $points, $rankingid) {
         global $DB;
 
-        $totalpoints = $DB->get_field('ranking_points', 'points', [
-            'userid' => $userid,
-            'courseid' => $courseid,
-        ]);
+        try {
+            $totalpoints = $DB->get_field('ranking_points', 'points', [
+                'userid' => $userid,
+                'courseid' => $courseid,
+            ]);
 
-        $event = event\points_awarded::create([
-            'context' => \context_course::instance($courseid),
-            'userid' => $userid,
-            'objectid' => $rankingid,
-            'courseid' => $courseid,
-            'other' => [
-                'points' => $points,
-                'totalpoints' => (float) $totalpoints,
-            ],
-        ]);
-        $event->trigger();
+            if ($totalpoints === false) {
+                $totalpoints = $points;
+            }
+
+            $event = event\points_awarded::create([
+                'context' => \context_course::instance($courseid),
+                'userid' => $userid,
+                'objectid' => $rankingid,
+                'courseid' => $courseid,
+                'other' => [
+                    'points' => $points,
+                    'totalpoints' => (float) $totalpoints,
+                ],
+            ]);
+            $event->trigger();
+        } catch (\Exception $e) {
+            debugging('block_ranking: Failed to fire points_awarded event - ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
     }
 
     /**
@@ -359,7 +372,8 @@ class manager {
     protected static function get_config($name) {
         global $DB;
 
-        if (empty(self::$config)) {
+        if (self::$config === null) {
+            self::$config = [];
             $records = $DB->get_records('config_plugins', ['plugin' => 'block_ranking']);
 
             foreach ($records as $key => $value) {
