@@ -1,7 +1,7 @@
 # Moodle Ranking Block (Fork)
 
-> **Fork of [hyukudan/moodle-block_ranking](https://github.com/hyukudan/moodle-block_ranking)**
-> The original plugin has been abandoned and is incompatible with modern Moodle versions.
+> **Fork of [willianmano/moodle-block_ranking](https://github.com/willianmano/moodle-block_ranking)**
+> The original plugin by Willian Mano has been abandoned and is incompatible with modern Moodle versions.
 > This fork brings it up to date with **Moodle 4.5+ / 5.x**, fixing critical security issues, adding GDPR compliance, modernizing the UI, and adding new features.
 
 ## What is this plugin?
