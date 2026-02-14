@@ -245,22 +245,146 @@ class block_ranking_test extends advanced_testcase {
     }
 
     /**
-     * Test that cache is invalidated when points are added.
+     * Test that cache is invalidated only for the target course.
      */
-    public function test_cache_invalidation() {
+    public function test_cache_invalidation_targeted() {
         $this->resetAfterTest(true);
 
-        // Create a cache and set a value.
         $cache = \cache::make('block_ranking', 'course_ranking');
-        $cache->set('general_1_10_0', ['test_data']);
+        $cache->set('general_1_10_0', ['course1_data']);
+        $cache->set('general_2_10_0', ['course2_data']);
 
-        // Verify it exists.
-        $this->assertNotFalse($cache->get('general_1_10_0'));
-
-        // Invalidate.
+        // Invalidate course 1 only.
         rankinglib::invalidate_course_cache(1);
 
-        // After purge, cache should be empty.
+        // Course 1 cache should be gone.
         $this->assertFalse($cache->get('general_1_10_0'));
+        // Course 2 cache should still exist.
+        $this->assertNotFalse($cache->get('general_2_10_0'));
+    }
+
+    /**
+     * Test that week/month start helpers return reasonable timestamps.
+     */
+    public function test_date_helpers() {
+        $this->resetAfterTest(true);
+
+        $weekstart = rankinglib::get_week_start();
+        $monthstart = rankinglib::get_month_start();
+        $now = time();
+
+        // Week start should be in the past (or now at most).
+        $this->assertLessThanOrEqual($now, $weekstart);
+        // Week start should be within the last 7 days.
+        $this->assertGreaterThan($now - (7 * DAYSECS), $weekstart);
+
+        // Month start should be in the past (or now at most).
+        $this->assertLessThanOrEqual($now, $monthstart);
+        // Month start should be within the last 31 days.
+        $this->assertGreaterThan($now - (31 * DAYSECS), $monthstart);
+    }
+
+    /**
+     * Test that points accumulate correctly with multiple additions.
+     */
+    public function test_points_accumulate() {
+        global $DB;
+
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+        $student = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($student->id, $course->id, 'student');
+
+        // Create two different activities.
+        $page1 = $this->getDataGenerator()->create_module('page', [
+            'course' => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+        $page2 = $this->getDataGenerator()->create_module('page', [
+            'course' => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+
+        $cmcid1 = $DB->insert_record('course_modules_completion', (object) [
+            'coursemoduleid' => $page1->cmid,
+            'userid' => $student->id,
+            'completionstate' => 1,
+            'timemodified' => time(),
+        ]);
+        $cmcid2 = $DB->insert_record('course_modules_completion', (object) [
+            'coursemoduleid' => $page2->cmid,
+            'userid' => $student->id,
+            'completionstate' => 1,
+            'timemodified' => time(),
+        ]);
+
+        manager::add_user_points($cmcid1);
+        $afterfirst = $DB->get_record('ranking_points', [
+            'userid' => $student->id,
+            'courseid' => $course->id,
+        ]);
+
+        manager::add_user_points($cmcid2);
+        $aftersecond = $DB->get_record('ranking_points', [
+            'userid' => $student->id,
+            'courseid' => $course->id,
+        ]);
+
+        // Second should have more points than first.
+        $this->assertGreaterThan($afterfirst->points, $aftersecond->points);
+        // Should still be a single ranking_points record (atomic update).
+        $this->assertEquals(1, $DB->count_records('ranking_points', [
+            'userid' => $student->id,
+            'courseid' => $course->id,
+        ]));
+        // Should have 2 log entries.
+        $this->assertEquals(2, $DB->count_records('ranking_logs', ['rankingid' => $afterfirst->id]));
+    }
+
+    /**
+     * Test privacy provider delete_data_for_user removes only that user's data.
+     */
+    public function test_privacy_delete_for_user() {
+        global $DB;
+
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course();
+        $user1 = $this->getDataGenerator()->create_user();
+        $user2 = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($user1->id, $course->id, 'student');
+        $this->getDataGenerator()->enrol_user($user2->id, $course->id, 'student');
+
+        $now = time();
+        $pointid1 = $DB->insert_record('ranking_points', (object) [
+            'userid' => $user1->id, 'courseid' => $course->id,
+            'points' => 25, 'timecreated' => $now, 'timemodified' => $now,
+        ]);
+        $pointid2 = $DB->insert_record('ranking_points', (object) [
+            'userid' => $user2->id, 'courseid' => $course->id,
+            'points' => 15, 'timecreated' => $now, 'timemodified' => $now,
+        ]);
+        $DB->insert_record('ranking_logs', (object) [
+            'rankingid' => $pointid1, 'courseid' => $course->id,
+            'course_modules_completion' => 1, 'points' => 25, 'timecreated' => $now,
+        ]);
+        $DB->insert_record('ranking_logs', (object) [
+            'rankingid' => $pointid2, 'courseid' => $course->id,
+            'course_modules_completion' => 2, 'points' => 15, 'timecreated' => $now,
+        ]);
+
+        // Delete only user1's data.
+        $coursecontext = \context_course::instance($course->id);
+        $contextlist = new \core_privacy\local\request\approved_contextlist(
+            $user1, 'block_ranking', [$coursecontext->id]
+        );
+        privacy\provider::delete_data_for_user($contextlist);
+
+        // User1 data should be gone.
+        $this->assertEquals(0, $DB->count_records('ranking_points', ['userid' => $user1->id]));
+        // User2 data should remain.
+        $this->assertEquals(1, $DB->count_records('ranking_points', ['userid' => $user2->id]));
+        $this->assertEquals(1, $DB->count_records('ranking_logs', ['rankingid' => $pointid2]));
     }
 }

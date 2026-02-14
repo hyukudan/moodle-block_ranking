@@ -65,8 +65,8 @@ class block implements renderable, templatable {
     public function export_for_template(renderer_base $output) {
         $rankinglib = new rankinglib();
 
-        $weekstart = strtotime(date('d-m-Y', strtotime('-'.date('w').' days')));
-        $monthstart = strtotime(date('Y-m-01'));
+        $weekstart = rankinglib::get_week_start();
+        $monthstart = rankinglib::get_month_start();
 
         $general = $rankinglib->get_students($this->rankingsize);
         $weekly = $rankinglib->get_students_by_date($weekstart, time(), $this->rankingsize);

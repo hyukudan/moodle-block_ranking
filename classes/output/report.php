@@ -73,10 +73,10 @@ class report implements renderable, templatable {
         $rankinglib = new rankinglib();
 
         if ($this->period === 'weekly') {
-            $datestart = strtotime(date('d-m-Y', strtotime('-' . date('w') . ' days')));
+            $datestart = rankinglib::get_week_start();
             $students = $rankinglib->get_students_by_date($datestart, time(), $this->rankingsize);
         } else if ($this->period === 'monthly') {
-            $datestart = strtotime(date('Y-m-01'));
+            $datestart = rankinglib::get_month_start();
             $students = $rankinglib->get_students_by_date($datestart, time(), $this->rankingsize);
         } else {
             $students = $rankinglib->get_students($this->rankingsize, $this->group);

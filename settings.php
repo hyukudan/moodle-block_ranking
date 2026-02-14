@@ -84,7 +84,7 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configtext('block_ranking/grade_multiplier',
         get_string('grade_multiplier', 'block_ranking'),
         get_string('grade_multiplier_help', 'block_ranking'),
-        '1', PARAM_RAW));
+        '1', PARAM_FLOAT));
 
     $settings->add(new admin_setting_configselect(
                     'block_ranking/enable_multiple_quizz_attempts',

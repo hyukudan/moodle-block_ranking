@@ -36,6 +36,8 @@
       <INDEXES>
         <INDEX NAME="rankingid_ix" UNIQUE="false" FIELDS="rankingid"/>
         <INDEX NAME="cmc_ix" UNIQUE="false" FIELDS="course_modules_completion"/>
+        <INDEX NAME="rankingid_timecreated_ix" UNIQUE="false" FIELDS="rankingid, timecreated"/>
+        <INDEX NAME="courseid_ix" UNIQUE="false" FIELDS="courseid"/>
       </INDEXES>
     </TABLE>
   </TABLES>

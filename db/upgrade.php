@@ -88,5 +88,23 @@ function xmldb_block_ranking_upgrade($oldversion, $block) {
         upgrade_plugin_savepoint(true, 2026021400, 'block', 'ranking');
     }
 
+    if ($oldversion < 2026021401) {
+        $table = new xmldb_table('ranking_logs');
+
+        // Composite index for date-filtered ranking queries.
+        $index = new xmldb_index('rankingid_timecreated_ix', XMLDB_INDEX_NOTUNIQUE, ['rankingid', 'timecreated']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Course ID index for report chart queries.
+        $index = new xmldb_index('courseid_ix', XMLDB_INDEX_NOTUNIQUE, ['courseid']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        upgrade_plugin_savepoint(true, 2026021401, 'block', 'ranking');
+    }
+
     return true;
 }

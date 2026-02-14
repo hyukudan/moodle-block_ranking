@@ -36,14 +36,50 @@ use user_picture;
 class rankinglib {
 
     /**
-     * Invalidate all ranking caches for a given course.
+     * Invalidate ranking caches for a given course.
+     *
+     * Deletes the most commonly used general ranking cache keys for this course.
+     * Date-filtered caches (weekly/monthly) are left to expire via TTL (5 min).
      *
      * @param int $courseid
      * @return void
      */
     public static function invalidate_course_cache($courseid) {
         $cache = cache::make('block_ranking', 'course_ranking');
-        $cache->purge();
+
+        // Delete the most common general ranking keys for this course.
+        $commonsizes = [10, 20, 50, 100];
+        $keys = [];
+        foreach ($commonsizes as $size) {
+            $keys[] = "general_{$courseid}_{$size}_0";
+        }
+        $cache->delete_many($keys);
+    }
+
+    /**
+     * Get the start-of-week timestamp respecting user timezone and site calendar settings.
+     *
+     * @return int Unix timestamp of the beginning of the current week.
+     */
+    public static function get_week_start() {
+        $now = time();
+        $userdate = usergetdate($now);
+        $usermidnight = usergetmidnight($now);
+        $weekday = $userdate['wday']; // 0 = Sunday, 6 = Saturday.
+        $startwday = (int) get_config('core', 'calendar_startwday');
+        $daysback = ($weekday - $startwday + 7) % 7;
+
+        return $usermidnight - ($daysback * DAYSECS);
+    }
+
+    /**
+     * Get the start-of-month timestamp respecting user timezone.
+     *
+     * @return int Unix timestamp of the beginning of the current month.
+     */
+    public static function get_month_start() {
+        $userdate = usergetdate(time());
+        return make_timestamp($userdate['year'], $userdate['mon'], 1);
     }
 
     /**
@@ -76,8 +112,7 @@ class rankinglib {
             list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
 
             $userfields = user_picture::fields('u', ['username']);
-            $sql = "SELECT
-                    DISTINCT $userfields, r.points
+            $sql = "SELECT $userfields, r.points
                 FROM
                     {user} u
                 INNER JOIN {role_assignments} a ON a.userid = u.id
@@ -87,7 +122,6 @@ class rankinglib {
             $params = array_merge($roleparams, [
                 'contextid' => $context->id,
                 'courseid' => $COURSE->id,
-                'crsid' => $COURSE->id,
                 'r_courseid' => $COURSE->id
             ]);
 
@@ -98,10 +132,8 @@ class rankinglib {
             }
 
             $sql .= " WHERE a.contextid = :contextid
-                AND a.userid = u.id
                 AND a.roleid $rolesql
                 AND c.instanceid = :courseid
-                AND r.courseid = :crsid
                 ORDER BY r.points DESC, u.firstname ASC";
 
             $users = array_values($DB->get_records_sql($sql, $params, 0, $limit));
@@ -142,9 +174,8 @@ class rankinglib {
             list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
 
             $userfields = user_picture::fields('u', ['username']);
-            $sql = "SELECT
-                    DISTINCT $userfields,
-                    sum(rl.points) as points
+            $sql = "SELECT $userfields,
+                    SUM(rl.points) as points
                 FROM
                     {user} u
                 INNER JOIN {role_assignments} a ON a.userid = u.id
@@ -152,19 +183,16 @@ class rankinglib {
                 INNER JOIN {ranking_logs} rl ON rl.rankingid = r.id
                 INNER JOIN {context} c ON c.id = a.contextid
                 WHERE a.contextid = :contextid
-                AND a.userid = u.id
                 AND a.roleid $rolesql
                 AND c.instanceid = :courseid
-                AND r.courseid = :crsid
                 AND rl.timecreated BETWEEN :datestart AND :dateend
-                GROUP BY " . $userfields . "
+                GROUP BY u.id, $userfields
                 ORDER BY points DESC, u.firstname ASC";
 
             $params = array_merge($roleparams, [
                 'contextid' => $context->id,
                 'courseid' => $COURSE->id,
                 'r_courseid' => $COURSE->id,
-                'crsid' => $COURSE->id,
                 'datestart' => $datestart,
                 'dateend' => $dateend,
             ]);
