@@ -168,13 +168,15 @@ class manager {
     /**
      * Check if a user's ranking changed and send notifications.
      *
+     * Uses cache to track the last notified position per user/course to avoid
+     * spamming notifications when the user's position hasn't changed.
+     *
      * @param int $userid
      * @param int $courseid
      */
     protected static function check_and_notify_ranking_change($userid, $courseid) {
         global $DB;
 
-        // Verify user has a ranking record before querying position.
         if (!$DB->record_exists('ranking_points', ['userid' => $userid, 'courseid' => $courseid])) {
             return;
         }
@@ -187,10 +189,72 @@ class manager {
                       WHERE userid = :userid AND courseid = :crsid
                  )";
         $params = ['courseid' => $courseid, 'userid' => $userid, 'crsid' => $courseid];
-
         $result = $DB->get_record_sql($sql, $params);
-        if ($result && $result->position <= 3) {
+
+        if (!$result) {
+            return;
+        }
+
+        $currentpos = (int) $result->position;
+
+        // Get the last notified position from cache to avoid duplicates.
+        $cache = \cache::make('block_ranking', 'user_points');
+        $cachekey = "notified_pos_{$userid}_{$courseid}";
+        $lastnotifiedpos = $cache->get($cachekey);
+
+        // If position hasn't changed, skip all notifications.
+        if ($lastnotifiedpos !== false && (int) $lastnotifiedpos === $currentpos) {
+            return;
+        }
+
+        $previouspos = ($lastnotifiedpos !== false) ? (int) $lastnotifiedpos : null;
+
+        // Notify top 3 entry (only if they just entered top 3, not if they were already there).
+        if ($currentpos <= 3 && ($previouspos === null || $previouspos > 3)) {
             notification_manager::notify_top3($userid, $courseid);
+        }
+
+        // Detect if user overtook someone: find users just below them who were ahead before.
+        if ($previouspos !== null && $currentpos < $previouspos) {
+            self::notify_overtaken_users($userid, $courseid, $currentpos, $previouspos);
+        }
+
+        // Update cached position.
+        $cache->set($cachekey, $currentpos);
+    }
+
+    /**
+     * Notify users who were overtaken by the given user.
+     *
+     * @param int $userid The user who moved up.
+     * @param int $courseid The course.
+     * @param int $newpos The user's new position.
+     * @param int $oldpos The user's previous position.
+     */
+    protected static function notify_overtaken_users($userid, $courseid, $newpos, $oldpos) {
+        global $DB;
+
+        // Find users who are now between newpos and oldpos (they got pushed down).
+        $sql = "SELECT rp.userid
+                  FROM {ranking_points} rp
+                 WHERE rp.courseid = :courseid
+                   AND rp.userid != :userid
+                 ORDER BY rp.points DESC";
+        $allranked = $DB->get_records_sql($sql, ['courseid' => $courseid, 'userid' => $userid]);
+
+        $pos = 1;
+        foreach ($allranked as $record) {
+            if ($pos >= $newpos && $pos < $oldpos) {
+                // This user was pushed down — notify them (at most 3 to avoid spam).
+                notification_manager::notify_overtaken($record->userid, $userid, $courseid);
+                if ($pos - $newpos >= 2) {
+                    break;
+                }
+            }
+            $pos++;
+            if ($pos >= $oldpos) {
+                break;
+            }
         }
     }
 

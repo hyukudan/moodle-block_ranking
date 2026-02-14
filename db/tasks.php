@@ -14,19 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 /**
- * Ranking block version details
+ * Scheduled task definitions for block_ranking.
  *
  * @package    block_ranking
- * @copyright  2017 Willian Mano http://conecti.me
+ * @copyright  2024 block_ranking contributors
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026021402;
-$plugin->requires  = 2024100700;
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'Version for Moodle 4.5+ with full feature set: security, caching, GDPR, notifications, pagination';
-$plugin->component = 'block_ranking';
+$tasks = [
+    [
+        'classname' => 'block_ranking\task\weekly_summary',
+        'blocking' => 0,
+        'minute' => '0',
+        'hour' => '8',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '1', // Monday.
+    ],
+];

@@ -83,25 +83,109 @@ class rankinglib {
     }
 
     /**
+     * Count total ranked students in the current course.
+     *
+     * @param int|null $groupid Optional group filter.
+     * @return int
+     */
+    public function count_students($groupid = null) {
+        global $COURSE, $DB, $PAGE;
+
+        $context = $PAGE->context;
+
+        $roleids = block_ranking_helper::get_student_role_ids();
+        if (empty($roleids)) {
+            return 0;
+        }
+
+        list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+
+        $sql = "SELECT COUNT(DISTINCT u.id)
+            FROM {user} u
+            INNER JOIN {role_assignments} a ON a.userid = u.id
+            INNER JOIN {ranking_points} r ON r.userid = u.id AND r.courseid = :r_courseid
+            INNER JOIN {context} c ON c.id = a.contextid";
+
+        $params = array_merge($roleparams, [
+            'contextid' => $context->id,
+            'courseid' => $COURSE->id,
+            'r_courseid' => $COURSE->id,
+        ]);
+
+        if ($groupid) {
+            $sql .= " INNER JOIN {groups_members} gm ON gm.userid = u.id AND gm.groupid = :groupid";
+            $params['groupid'] = $groupid;
+        }
+
+        $sql .= " WHERE a.contextid = :contextid
+            AND a.roleid $rolesql
+            AND c.instanceid = :courseid";
+
+        return $DB->count_records_sql($sql, $params);
+    }
+
+    /**
+     * Count total ranked students by date range in the current course.
+     *
+     * @param int $datestart
+     * @param int $dateend
+     * @return int
+     */
+    public function count_students_by_date($datestart, $dateend) {
+        global $COURSE, $DB, $PAGE;
+
+        $context = $PAGE->context;
+
+        $roleids = block_ranking_helper::get_student_role_ids();
+        if (empty($roleids)) {
+            return 0;
+        }
+
+        list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+
+        $sql = "SELECT COUNT(DISTINCT u.id)
+            FROM {user} u
+            INNER JOIN {role_assignments} a ON a.userid = u.id
+            INNER JOIN {ranking_points} r ON r.userid = u.id AND r.courseid = :r_courseid
+            INNER JOIN {ranking_logs} rl ON rl.rankingid = r.id
+            INNER JOIN {context} c ON c.id = a.contextid
+            WHERE a.contextid = :contextid
+            AND a.roleid $rolesql
+            AND c.instanceid = :courseid
+            AND rl.timecreated BETWEEN :datestart AND :dateend";
+
+        $params = array_merge($roleparams, [
+            'contextid' => $context->id,
+            'courseid' => $COURSE->id,
+            'r_courseid' => $COURSE->id,
+            'datestart' => $datestart,
+            'dateend' => $dateend,
+        ]);
+
+        return $DB->count_records_sql($sql, $params);
+    }
+
+    /**
      * Return the list of students in the course ranking
      *
      * @param int $limit
      * @param int $groupid
+     * @param int $offset
      *
      * @return mixed
      *
      * @throws \coding_exception
      * @throws \dml_exception
      */
-    public function get_students($limit = 10, $groupid = null) {
+    public function get_students($limit = 10, $groupid = null, $offset = 0) {
         global $COURSE, $DB, $PAGE;
 
         $context = $PAGE->context;
 
-        // Try cache first.
+        // Try cache first (only for non-offset requests — paginated requests skip cache).
         $cache = cache::make('block_ranking', 'course_ranking');
         $cachekey = "general_{$COURSE->id}_{$limit}_" . ($groupid ?? 0);
-        $users = $cache->get($cachekey);
+        $users = ($offset === 0) ? $cache->get($cachekey) : false;
 
         if ($users === false) {
             $roleids = block_ranking_helper::get_student_role_ids();
@@ -136,11 +220,13 @@ class rankinglib {
                 AND c.instanceid = :courseid
                 ORDER BY r.points DESC, u.firstname ASC";
 
-            $users = array_values($DB->get_records_sql($sql, $params, 0, $limit));
-            $cache->set($cachekey, $users);
+            $users = array_values($DB->get_records_sql($sql, $params, $offset, $limit));
+            if ($offset === 0) {
+                $cache->set($cachekey, $users);
+            }
         }
 
-        return $this->get_aditionaldata($users);
+        return $this->get_aditionaldata($users, $offset);
     }
 
     /**
@@ -149,21 +235,22 @@ class rankinglib {
      * @param int $datestart
      * @param int $dateend
      * @param int $limit
+     * @param int $offset
      *
      * @return mixed
      *
      * @throws \coding_exception
      * @throws \dml_exception
      */
-    public function get_students_by_date($datestart, $dateend, $limit = 10) {
+    public function get_students_by_date($datestart, $dateend, $limit = 10, $offset = 0) {
         global $COURSE, $DB, $PAGE;
 
         $context = $PAGE->context;
 
-        // Try cache first.
+        // Try cache first (only for non-offset requests).
         $cache = cache::make('block_ranking', 'course_ranking');
         $cachekey = "dated_{$COURSE->id}_{$limit}_{$datestart}_{$dateend}";
-        $users = $cache->get($cachekey);
+        $users = ($offset === 0) ? $cache->get($cachekey) : false;
 
         if ($users === false) {
             $roleids = block_ranking_helper::get_student_role_ids();
@@ -197,23 +284,26 @@ class rankinglib {
                 'dateend' => $dateend,
             ]);
 
-            $users = array_values($DB->get_records_sql($sql, $params, 0, $limit));
-            $cache->set($cachekey, $users);
+            $users = array_values($DB->get_records_sql($sql, $params, $offset, $limit));
+            if ($offset === 0) {
+                $cache->set($cachekey, $users);
+            }
         }
 
-        return $this->get_aditionaldata($users);
+        return $this->get_aditionaldata($users, $offset);
     }
 
     /**
      * Get the users aditional data.
      *
      * @param array $data
+     * @param int $offset Starting offset for position calculation.
      *
      * @return string|array
      *
      * @throws \coding_exception
      */
-    protected function get_aditionaldata($data) {
+    protected function get_aditionaldata($data, $offset = 0) {
         global $USER, $OUTPUT;
 
         if (empty($data)) {
@@ -228,15 +318,15 @@ class rankinglib {
             }
         }
 
-        $lastpos = 1;
+        $lastpos = $offset + 1;
         $lastpoints = current($data)->points;
         for ($i = 0; $i < count($data); $i++) {
 
             $data[$i]->isself = ($data[$i]->id == $USER->id);
             $data[$i]->class = $data[$i]->isself ? 'ranking-row-self' : '';
 
-            if ($lastpoints > $data[$i]->points) {
-                $lastpos++;
+            if ($i > 0 && $lastpoints > $data[$i]->points) {
+                $lastpos = $offset + $i + 1;
                 $lastpoints = $data[$i]->points;
             }
 

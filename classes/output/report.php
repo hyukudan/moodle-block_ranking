@@ -37,7 +37,7 @@ use renderer_base;
  */
 class report implements renderable, templatable {
 
-    /** @var int $rankingsize The ranking size. */
+    /** @var int $rankingsize The ranking size (per page). */
     protected $rankingsize;
 
     /** @var int|null $group The moodle group. */
@@ -46,17 +46,25 @@ class report implements renderable, templatable {
     /** @var string $period Period filter: 'all', 'weekly', 'monthly'. */
     protected $period;
 
+    /** @var int $page Current page number (0-based). */
+    protected $page;
+
+    /** @var int $totalcount Total count of students (set after export). */
+    public $totalcount = 0;
+
     /**
      * Block constructor.
      *
      * @param int $rankingsize
      * @param int|null $group
      * @param string $period
+     * @param int $page
      */
-    public function __construct($rankingsize = 100, $group = null, $period = 'all') {
+    public function __construct($rankingsize = 100, $group = null, $period = 'all', $page = 0) {
         $this->rankingsize = $rankingsize;
         $this->group = $group;
         $this->period = $period;
+        $this->page = $page;
     }
 
     /**
@@ -71,15 +79,19 @@ class report implements renderable, templatable {
      */
     public function export_for_template(renderer_base $output) {
         $rankinglib = new rankinglib();
+        $offset = $this->page * $this->rankingsize;
 
         if ($this->period === 'weekly') {
             $datestart = rankinglib::get_week_start();
-            $students = $rankinglib->get_students_by_date($datestart, time(), $this->rankingsize);
+            $this->totalcount = $rankinglib->count_students_by_date($datestart, time());
+            $students = $rankinglib->get_students_by_date($datestart, time(), $this->rankingsize, $offset);
         } else if ($this->period === 'monthly') {
             $datestart = rankinglib::get_month_start();
-            $students = $rankinglib->get_students_by_date($datestart, time(), $this->rankingsize);
+            $this->totalcount = $rankinglib->count_students_by_date($datestart, time());
+            $students = $rankinglib->get_students_by_date($datestart, time(), $this->rankingsize, $offset);
         } else {
-            $students = $rankinglib->get_students($this->rankingsize, $this->group);
+            $this->totalcount = $rankinglib->count_students($this->group);
+            $students = $rankinglib->get_students($this->rankingsize, $this->group, $offset);
         }
 
         return [

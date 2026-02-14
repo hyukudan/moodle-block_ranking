@@ -94,6 +94,9 @@ $string['notification_top3'] = 'Congratulations! You reached the top 3 in the ra
 $string['notification_overtaken'] = '{$a->username} has overtaken you in the ranking for {$a->coursename}.';
 $string['notification_weekly_summary'] = 'Your ranking position in {$a->coursename}: #{$a->position} with {$a->points} points.';
 
+// Scheduled tasks.
+$string['task_weekly_summary'] = 'Send weekly ranking position summaries';
+
 // Events.
 $string['event_points_awarded'] = 'Ranking points awarded';
 

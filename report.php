@@ -31,6 +31,7 @@ $perpage = optional_param('perpage', DEFAULT_PAGE_SIZE, PARAM_INT);
 $group = optional_param('group', null, PARAM_INT);
 $period = optional_param('period', 'all', PARAM_ALPHA);
 $format = optional_param('format', '', PARAM_ALPHA);
+$page = optional_param('page', 0, PARAM_INT);
 
 $course = $DB->get_record('course', array('id' => $courseid), '*', MUST_EXIST);
 
@@ -52,12 +53,16 @@ if ($period !== 'all') {
     $params['period'] = $period;
 }
 
+if ($page > 0) {
+    $params['page'] = $page;
+}
+
 $url = new moodle_url('/blocks/ranking/report.php', $params);
 
-// Handle CSV export.
+// Handle CSV export (exports ALL records, no pagination).
 if ($format === 'csv') {
     require_sesskey();
-    $renderable = new \block_ranking\output\report($perpage, $group, $period);
+    $renderable = new \block_ranking\output\report(0, $group, $period);
     $renderer = $PAGE->get_renderer('block_ranking');
     $data = $renderable->export_for_template($renderer);
 
@@ -135,8 +140,14 @@ echo html_writer::link($csvurl, get_string('export_csv', 'block_ranking'), [
 echo html_writer::end_div();
 
 // Ranking table.
-$renderable = new \block_ranking\output\report($perpage, $group, $period);
+$renderable = new \block_ranking\output\report($perpage, $group, $period, $page);
 echo $output->render($renderable);
+
+// Pagination bar.
+if ($renderable->totalcount > $perpage) {
+    $pagingurl = new moodle_url('/blocks/ranking/report.php', $params);
+    echo $output->paging_bar($renderable->totalcount, $page, $perpage, $pagingurl);
+}
 
 // Points evolution chart (only for all-time view).
 if ($period === 'all') {
