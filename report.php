@@ -55,6 +55,7 @@ $url = new moodle_url('/blocks/ranking/report.php', $params);
 
 // Handle CSV export.
 if ($format === 'csv') {
+    require_sesskey();
     $renderable = new \block_ranking\output\report($perpage, $group, $period);
     $renderer = $PAGE->get_renderer('block_ranking');
     $data = $renderable->export_for_template($renderer);
@@ -125,7 +126,7 @@ $select = new single_select($periodurl, 'period', $periodtypes, $period, null, '
 $select->label = get_string('filter_period', 'block_ranking');
 echo $output->render($select);
 
-$csvurl = new moodle_url('/blocks/ranking/report.php', array_merge($params, ['format' => 'csv']));
+$csvurl = new moodle_url('/blocks/ranking/report.php', array_merge($params, ['format' => 'csv', 'sesskey' => sesskey()]));
 echo html_writer::link($csvurl, get_string('export_csv', 'block_ranking'), [
     'class' => 'btn btn-sm btn-outline-secondary',
 ]);

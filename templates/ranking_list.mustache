@@ -9,11 +9,11 @@
 }}
 <li class="ranking-item {{class}}">
     <span class="ranking-position{{#isgold}} gold{{/isgold}}{{#issilver}} silver{{/issilver}}{{#isbronze}} bronze{{/isbronze}}">
-        {{{position}}}
+        {{position}}
     </span>
     <span class="ranking-avatar">{{{userpic}}}</span>
     <div class="ranking-user-info">
-        <div class="ranking-username">{{{fullname}}}</div>
+        <div class="ranking-username">{{fullname}}</div>
         <div class="ranking-progress">
             <div class="ranking-progress-bar" style="width: {{progresspct}}%"></div>
         </div>

@@ -163,6 +163,10 @@ class block_ranking_helper {
 
         $grade = $DB->get_record('quiz_attempts', ['id' => $id], '*');
 
+        if (!$grade) {
+            return null;
+        }
+
         return $grade->sumgrades;
     }
 

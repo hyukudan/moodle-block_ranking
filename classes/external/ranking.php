@@ -126,6 +126,9 @@ class ranking extends external_api {
 
                 // Code get from lib.php : generate_table .
                 $data = $students;
+                if (empty($data)) {
+                    continue;
+                }
                 $lastpos = 1;
                 $lastpoints = current($data)->points;
                 for ($i = 0; $i < count($data); $i++) {

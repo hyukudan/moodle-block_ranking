@@ -55,6 +55,11 @@ class manager {
 
         $usercompletion = self::get_module_completion($cmcid);
 
+        if (!$usercompletion) {
+            debugging('block_ranking: completion record not found for cmcid ' . $cmcid, DEBUG_DEVELOPER);
+            return;
+        }
+
         // Map activity type to its config key; fall back to defaultpoints.
         $pointsmap = [
             'assign' => 'assignpoints',
@@ -145,6 +150,7 @@ class manager {
             self::add_ranking_log($rankingid, $completion->course, $completion->coursemoduleid, $points);
             $transaction->allow_commit();
         } catch (\Exception $e) {
+            debugging('block_ranking: failed to add points - ' . $e->getMessage(), DEBUG_DEVELOPER);
             $transaction->rollback($e);
             return;
         }
@@ -273,7 +279,10 @@ class manager {
             $scale = current($scale);
             $scale = explode(',', $scale->scale);
 
-            $finalgrade = $scale[$finalgrade - 1];
+            $index = (int) $finalgrade - 1;
+            if ($index >= 0 && $index < count($scale)) {
+                $finalgrade = $scale[$index];
+            }
         }
 
         return $finalgrade;
