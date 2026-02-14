@@ -33,9 +33,13 @@ The ranking works with **activity completion tracking**: you need to enable it a
   - `ranking_points(courseid, userid)` -- UNIQUE, main ranking query optimization
   - `ranking_points(userid)` -- user lookups
   - `ranking_logs(rankingid)` -- JOIN optimization
+  - `ranking_logs(rankingid, timecreated)` -- composite index for date-filtered ranking queries
   - `ranking_logs(course_modules_completion)` -- duplicate detection
-- **Moodle Cache API (MUC)** integration -- ranking queries are cached for 5 minutes with automatic invalidation when points change. Reduces database load significantly on courses with many students.
+  - `ranking_logs(courseid)` -- report page chart queries
+- **Moodle Cache API (MUC)** integration -- ranking queries are cached for 5 minutes with **targeted per-course invalidation** when points change. Reduces database load significantly on courses with many students.
+- **Atomic point updates** -- uses `UPDATE SET points = points + :newpoints` to avoid race conditions under concurrent completions
 - **Transactional writes** -- point additions and log entries are wrapped in a database transaction to prevent orphaned records on partial failures.
+- **Cross-database SQL** -- all queries use portable SQL (no MySQL-specific functions like `FROM_UNIXTIME`)
 
 ### Modernized UI/UX
 - **Visual podium** -- top 3 positions displayed with gold/silver/bronze colored badges
@@ -49,7 +53,8 @@ The ranking works with **activity completion tracking**: you need to enable it a
 
 ### Enhanced report page
 - **Period filter** -- filter ranking by All time, Weekly, or Monthly
-- **CSV export** -- download ranking data as CSV file
+- **Real pagination** -- navigate through pages of ranked students with Previous/Next buttons
+- **CSV export** -- download full ranking data as CSV file (exports all records, not just current page)
 - **Points evolution chart** -- line chart showing daily points over time (using Moodle's Chart API)
 - **Group selector** -- filter by course groups
 
@@ -59,7 +64,10 @@ The ranking works with **activity completion tracking**: you need to enable it a
 - **Streamlined config** -- map-based activity point lookup instead of switch statement
 
 ### Notifications
-- **Moodle Message API integration** -- notifications when a student reaches the top 3
+- **Moodle Message API integration** -- notifications for ranking changes
+  - **Top 3 alert** -- notified when entering the top 3 (deduplicated -- only triggers on actual position change)
+  - **Overtaken alert** -- notified when another student passes you in the ranking
+  - **Weekly summary** -- scheduled task sends position summaries every Monday at 8:00
 - Configurable via user notification preferences (popup, email, mobile push)
 
 ### New web service endpoints
@@ -80,8 +88,18 @@ The ranking works with **activity completion tracking**: you need to enable it a
 - **PHPUnit tests** -- real unit tests replacing the placeholder (points addition, duplicate detection, ranking order, role filtering, privacy export/delete, cache invalidation)
 - **Behat tests** -- acceptance tests for block addition, student score display, report page features
 
+### Robustness
+- **Comprehensive null safety** -- all `$DB->get_record()` returns checked before property access
+- **Observer error handling** -- event observer wrapped in try-catch with `debugging()` logging
+- **CSRF protection** -- CSV export requires `sesskey` validation
+- **XSS prevention** -- Mustache templates use double-stache `{{var}}` for text output; form inputs validated with `PARAM_TEXT`/`PARAM_FLOAT`
+- **Timezone-aware dates** -- weekly/monthly rankings use `usergetdate()` and site `calendar_startwday` setting
+- **Privacy API transactions** -- all GDPR delete operations wrapped in database transactions
+
 ### Bug fixes
 - Fixed `$stirng` typos in both English and Portuguese language files
+- Fixed scale grade text-to-number coercion for non-numeric scale values
+- Fixed division by zero in group points average calculation
 
 ## Requirements
 
@@ -132,11 +150,11 @@ After installation:
 - **Weekly ranking** -- resets each week for ongoing motivation
 - **Monthly ranking** -- monthly leaderboard
 - **Group support** -- filter rankings by course groups
-- **Full report** -- top 100 students with period filter, CSV export, and evolution chart
+- **Full report** -- paginated student ranking with period filter, CSV export, and evolution chart
 - **Group graphs** -- visual charts for group points, averages, and weekly evolution
 - **Web service API** -- 3 endpoints registered with Moodle Mobile service
 - **Configurable student roles** -- no longer hardcoded to role ID 5
-- **Notifications** -- Moodle messaging for top 3 achievements
+- **Notifications** -- Moodle messaging for top 3 entry, overtaken alerts, and weekly summaries
 - **Custom events** -- `points_awarded` event for plugin integration
 - **Auto-refresh** -- AJAX-based live ranking updates
 - **GDPR compliant** -- full Privacy API implementation
