@@ -34,4 +34,13 @@ $tasks = [
         'month' => '*',
         'dayofweek' => '1', // Monday.
     ],
+    [
+        'classname' => 'block_ranking\task\refresh_ranking_cache',
+        'blocking' => 0,
+        'minute' => '*/5',
+        'hour' => '*',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '*',
+    ],
 ];

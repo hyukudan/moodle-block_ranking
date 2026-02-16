@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="blocks/ranking/db" VERSION="20260214" COMMENT="XMLDB file for Moodle blocks/ranking"
+<XMLDB PATH="blocks/ranking/db" VERSION="20260216" COMMENT="XMLDB file for Moodle blocks/ranking"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
@@ -19,6 +19,7 @@
       <INDEXES>
         <INDEX NAME="courseid_userid_uix" UNIQUE="true" FIELDS="courseid, userid"/>
         <INDEX NAME="userid_ix" UNIQUE="false" FIELDS="userid"/>
+        <INDEX NAME="idx_courseid_points" UNIQUE="false" FIELDS="courseid, points"/>
       </INDEXES>
     </TABLE>
     <TABLE NAME="ranking_logs" COMMENT="Points transaction log">
@@ -38,6 +39,26 @@
         <INDEX NAME="cmc_ix" UNIQUE="false" FIELDS="course_modules_completion"/>
         <INDEX NAME="rankingid_timecreated_ix" UNIQUE="false" FIELDS="rankingid, timecreated"/>
         <INDEX NAME="courseid_ix" UNIQUE="false" FIELDS="courseid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="ranking_cache" COMMENT="Precalculated ranking cache for performance">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="points" TYPE="number" LENGTH="10" DECIMALS="5" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="position" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="total_users" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+        <FIELD NAME="last_updated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="courseid_fk" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
+        <KEY NAME="userid_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="uq_course_user" UNIQUE="true" FIELDS="courseid, userid"/>
+        <INDEX NAME="idx_course_pos" UNIQUE="false" FIELDS="courseid, position"/>
       </INDEXES>
     </TABLE>
   </TABLES>
