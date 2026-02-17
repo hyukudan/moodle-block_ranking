@@ -234,27 +234,20 @@ class manager {
     protected static function notify_overtaken_users($userid, $courseid, $newpos, $oldpos) {
         global $DB;
 
-        // Find users who are now between newpos and oldpos (they got pushed down).
+        // Only fetch users in affected positions (newpos to oldpos-1), max 3.
+        $limit = min($oldpos - $newpos, 3);
+        $offset = max($newpos - 1, 0); // 0-indexed offset from top.
+
         $sql = "SELECT rp.userid
                   FROM {ranking_points} rp
                  WHERE rp.courseid = :courseid
                    AND rp.userid != :userid
                  ORDER BY rp.points DESC";
-        $allranked = $DB->get_records_sql($sql, ['courseid' => $courseid, 'userid' => $userid]);
+        $params = ['courseid' => $courseid, 'userid' => $userid];
+        $affectedusers = $DB->get_records_sql($sql, $params, $offset, $limit);
 
-        $pos = 1;
-        foreach ($allranked as $record) {
-            if ($pos >= $newpos && $pos < $oldpos) {
-                // This user was pushed down — notify them (at most 3 to avoid spam).
-                notification_manager::notify_overtaken($record->userid, $userid, $courseid);
-                if ($pos - $newpos >= 2) {
-                    break;
-                }
-            }
-            $pos++;
-            if ($pos >= $oldpos) {
-                break;
-            }
+        foreach ($affectedusers as $record) {
+            notification_manager::notify_overtaken($record->userid, $userid, $courseid);
         }
     }
 

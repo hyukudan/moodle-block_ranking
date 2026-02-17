@@ -139,5 +139,16 @@ function xmldb_block_ranking_upgrade($oldversion, $block) {
         upgrade_plugin_savepoint(true, 2026021600, 'block', 'ranking');
     }
 
+    if ($oldversion < 2026021700) {
+        // Add composite index for is_completion_repeated() query optimization.
+        $table = new xmldb_table('ranking_logs');
+        $index = new xmldb_index('rankingid_cmc_ix', XMLDB_INDEX_NOTUNIQUE, ['rankingid', 'course_modules_completion']);
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        upgrade_plugin_savepoint(true, 2026021700, 'block', 'ranking');
+    }
+
     return true;
 }

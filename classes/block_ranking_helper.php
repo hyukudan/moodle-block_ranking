@@ -99,8 +99,18 @@ class block_ranking_helper {
             return;
         }
 
-        if (!self::is_completion_completed($event->objectid)) {
-            return;
+        // Use event data to check completion state (avoids a DB query).
+        $eventdata = $event->get_data();
+        $completionstate = $eventdata['other']['completionstate'] ?? null;
+        if ($completionstate !== null) {
+            if (empty($completionstate)) {
+                return;
+            }
+        } else {
+            // Fallback for events that don't carry completionstate.
+            if (!self::is_completion_completed($event->objectid)) {
+                return;
+            }
         }
 
         if (self::is_completion_repeated($event->courseid, $event->relateduserid, $event->contextinstanceid)) {
@@ -119,17 +129,21 @@ class block_ranking_helper {
      * @return array Array of role IDs
      */
     public static function get_student_role_ids() {
+        static $cachedids = null;
+        if ($cachedids !== null) {
+            return $cachedids;
+        }
+
         $config = get_config('block_ranking', 'student_roles');
 
         if (!empty($config)) {
             // configmulticheckbox stores as comma-separated string of role IDs.
-            $roleids = explode(',', $config);
-            return array_map('intval', array_filter($roleids));
+            $cachedids = array_map('intval', array_filter(explode(',', $config)));
+        } else {
+            // Fallback: use all roles with 'student' archetype.
+            $cachedids = array_keys(get_archetype_roles('student'));
         }
-
-        // Fallback: use all roles with 'student' archetype.
-        $roles = get_archetype_roles('student');
-        return array_keys($roles);
+        return $cachedids;
     }
 
     /**

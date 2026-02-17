@@ -39,6 +39,7 @@
         <INDEX NAME="cmc_ix" UNIQUE="false" FIELDS="course_modules_completion"/>
         <INDEX NAME="rankingid_timecreated_ix" UNIQUE="false" FIELDS="rankingid, timecreated"/>
         <INDEX NAME="courseid_ix" UNIQUE="false" FIELDS="courseid"/>
+        <INDEX NAME="rankingid_cmc_ix" UNIQUE="false" FIELDS="rankingid, course_modules_completion"/>
       </INDEXES>
     </TABLE>
     <TABLE NAME="ranking_cache" COMMENT="Precalculated ranking cache for performance">
