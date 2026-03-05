@@ -55,29 +55,37 @@ class refresh_ranking_cache extends \core\task\scheduled_task {
         // Delete existing cache for this course.
         $DB->delete_records('ranking_cache', ['courseid' => $courseid]);
 
-        // Use window function (MariaDB 10.2+) to calculate rankings efficiently.
+        // Count total users once (avoids correlated subquery per row).
+        $totalusers = $DB->count_records_select('ranking_points',
+            'courseid = ? AND points > 0', [$courseid]);
+
+        if ($totalusers == 0) {
+            return;
+        }
+
+        // Use window function (MariaDB 10.2+) to calculate rankings.
         $sql = "SELECT courseid, userid, points,
-                       RANK() OVER (ORDER BY points DESC) as position,
-                       (SELECT COUNT(*) FROM {ranking_points} WHERE courseid = :courseid2 AND points > 0) as total_users
+                       RANK() OVER (ORDER BY points DESC) as position
                 FROM {ranking_points}
                 WHERE courseid = :courseid AND points > 0
                 ORDER BY points DESC";
 
-        $rankings = $DB->get_records_sql($sql, [
-            'courseid' => $courseid,
-            'courseid2' => $courseid,
-        ]);
+        $rankings = $DB->get_records_sql($sql, ['courseid' => $courseid]);
 
         $now = time();
+        $records = [];
         foreach ($rankings as $ranking) {
             $record = new \stdClass();
             $record->courseid = $ranking->courseid;
             $record->userid = $ranking->userid;
             $record->points = $ranking->points;
             $record->position = $ranking->position;
-            $record->total_users = $ranking->total_users;
+            $record->total_users = $totalusers;
             $record->last_updated = $now;
-            $DB->insert_record('ranking_cache', $record);
+            $records[] = $record;
         }
+
+        // Batch insert all records.
+        $DB->insert_records('ranking_cache', $records);
     }
 }

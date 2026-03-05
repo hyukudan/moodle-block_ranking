@@ -43,4 +43,13 @@ $tasks = [
         'month' => '*',
         'dayofweek' => '*',
     ],
+    [
+        'classname' => 'block_ranking\task\purge_old_logs',
+        'blocking' => 0,
+        'minute' => '30',
+        'hour' => '4',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '0', // Sunday.
+    ],
 ];
