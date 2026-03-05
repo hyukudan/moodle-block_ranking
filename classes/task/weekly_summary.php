@@ -58,8 +58,12 @@ class weekly_summary extends \core\task\scheduled_task {
             return;
         }
 
+        // Batch-load all courses (avoids N+1 queries).
+        list($insql, $inparams) = $DB->get_in_or_equal($courseids);
+        $courses = $DB->get_records_select('course', "id $insql", $inparams);
+
         foreach ($courseids as $courseid) {
-            $course = $DB->get_record('course', ['id' => $courseid]);
+            $course = $courses[$courseid] ?? null;
             if (!$course) {
                 continue;
             }
