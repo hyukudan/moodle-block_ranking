@@ -87,6 +87,18 @@
     height: 35px;
     object-fit: cover;
 }
+.block_ranking .ranking-initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+}
 
 /* ── User info ────────────────────────────────────── */
 .block_ranking .ranking-user-info {

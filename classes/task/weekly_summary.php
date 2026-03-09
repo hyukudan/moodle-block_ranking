@@ -157,7 +157,7 @@ class weekly_summary extends \core\task\scheduled_task {
                     $body,
                     $reporturl->out(false),
                     "Ver ranking completo",
-                    '#667eea'
+                    '#1e3a5f'
                 );
             } else {
                 $html = '<p>' . nl2br(s($plaintext)) . '</p>';
