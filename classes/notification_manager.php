@@ -48,18 +48,78 @@ class notification_manager {
             return;
         }
 
+        $user = \core_user::get_user($userid, '*', MUST_EXIST);
+        $courseurl = new \moodle_url('/course/view.php', ['id' => $courseid]);
+
+        // Get the user's actual position and points for the stat cards.
+        $rankrecord = $DB->get_record('ranking_points', ['userid' => $userid, 'courseid' => $courseid]);
+        $points = $rankrecord ? $rankrecord->points : 0;
+
+        // Determine exact position (count users with more points + 1).
+        $pos = $DB->count_records_select('ranking_points',
+            'courseid = :courseid AND points > :points',
+            ['courseid' => $courseid, 'points' => $points]
+        ) + 1;
+
+        if ($pos === 1) {
+            $posemoji = '🥇';
+            $postitle = '¡PRIMER PUESTO!';
+        } else if ($pos === 2) {
+            $posemoji = '🥈';
+            $postitle = '¡SEGUNDO PUESTO!';
+        } else {
+            $posemoji = '🥉';
+            $postitle = '¡TERCER PUESTO!';
+        }
+
+        // Plain text (engaging).
+        $plaintext = "🎉 ¡Enhorabuena {$user->firstname}!\n\n"
+            . "{$posemoji} {$postitle}\n\n"
+            . "Has llegado al TOP 3 del ranking en {$course->fullname}.\n"
+            . "Posición: #{$pos} | Puntos: {$points}\n\n"
+            . "¡Sigue así! Estás entre los mejores.\n\n"
+            . "Ver el curso: " . $courseurl->out(false);
+
+        $subject = "🥇 ¡{$user->firstname}, estás en el TOP 3!";
+
+        // Build HTML.
+        $usetemplate = class_exists('\local_achievements\email_template');
+        if ($usetemplate) {
+            $t = '\local_achievements\email_template';
+
+            $body = $t::text("🎉 <strong>¡Enhorabuena {$user->firstname}!</strong>", 'center', true)
+                . $t::highlight("{$posemoji} {$postitle} en el ranking")
+                . $t::stat_row([
+                    [$posemoji, "#{$pos}", 'Tu posición'],
+                    ['⭐', number_format($points, 0, ',', '.'), 'Puntos'],
+                ])
+                . $t::divider()
+                . $t::text("Has llegado al <strong>TOP 3</strong> en <strong>{$course->fullname}</strong>. ¡Estás entre los mejores!")
+                . $t::text("💪 ¡Sigue practicando para mantener tu puesto en el podio!");
+
+            $html = $t::wrap(
+                "¡Estás en el TOP 3!",
+                $body,
+                $courseurl->out(false),
+                "Ir al curso",
+                '#28a745'
+            );
+        } else {
+            $html = '<p>' . nl2br(s($plaintext)) . '</p>';
+        }
+
         $message = new \core\message\message();
         $message->component = 'block_ranking';
         $message->name = 'ranking_update';
         $message->userfrom = \core_user::get_noreply_user();
-        $message->userto = $userid;
-        $message->subject = get_string('ranking', 'block_ranking');
-        $message->fullmessage = get_string('notification_top3', 'block_ranking', $course->fullname);
-        $message->fullmessageformat = FORMAT_PLAIN;
-        $message->fullmessagehtml = '<p>' . get_string('notification_top3', 'block_ranking', $course->fullname) . '</p>';
-        $message->smallmessage = get_string('notification_top3', 'block_ranking', $course->fullname);
+        $message->userto = $user;
+        $message->subject = $subject;
+        $message->fullmessage = $plaintext;
+        $message->fullmessageformat = FORMAT_HTML;
+        $message->fullmessagehtml = $html;
+        $message->smallmessage = "{$posemoji} ¡{$user->firstname}, estás en el TOP 3 de {$course->fullname}!";
         $message->notification = 1;
-        $message->contexturl = new \moodle_url('/course/view.php', ['id' => $courseid]);
+        $message->contexturl = $courseurl;
         $message->contexturlname = $course->fullname;
         $message->courseid = $courseid;
 
@@ -87,22 +147,66 @@ class notification_manager {
             return;
         }
 
-        $a = new \stdClass();
-        $a->username = fullname($overtaker);
-        $a->coursename = $course->fullname;
+        $user = \core_user::get_user($userid, '*', MUST_EXIST);
+        $overtakername = fullname($overtaker);
+        $courseurl = new \moodle_url('/course/view.php', ['id' => $courseid]);
+
+        // Get user's current points and position.
+        $rankrecord = $DB->get_record('ranking_points', ['userid' => $userid, 'courseid' => $courseid]);
+        $points = $rankrecord ? $rankrecord->points : 0;
+        $currentpos = $DB->count_records_select('ranking_points',
+            'courseid = :courseid AND points > :points',
+            ['courseid' => $courseid, 'points' => $points]
+        ) + 1;
+
+        // Plain text (engaging).
+        $plaintext = "¡Hola {$user->firstname}!\n\n"
+            . "📊 {$overtakername} te ha adelantado en el ranking de {$course->fullname}.\n\n"
+            . "Tu posición actual: #{$currentpos} | Tus puntos: {$points}\n\n"
+            . "¡No te rindas! Completa más actividades para recuperar tu posición.\n\n"
+            . "Ver el curso: " . $courseurl->out(false);
+
+        $subject = "📊 ¡{$user->firstname}, {$overtakername} te ha adelantado!";
+
+        // Build HTML.
+        $usetemplate = class_exists('\local_achievements\email_template');
+        if ($usetemplate) {
+            $t = '\local_achievements\email_template';
+
+            $body = $t::text("¡Hola <strong>{$user->firstname}</strong>!")
+                . $t::highlight("📊 <strong>{$overtakername}</strong> te ha adelantado en el ranking")
+                . $t::stat_row([
+                    ['📍', "#{$currentpos}", 'Tu posición actual'],
+                    ['⭐', number_format($points, 0, ',', '.'), 'Tus puntos'],
+                ])
+                . $t::divider()
+                . $t::text("En el curso <strong>{$course->fullname}</strong>.")
+                . $t::text("💪 ¡No te rindas! Completa más actividades para recuperar tu posición.")
+                . $t::text("🚀 ¡Tú puedes!");
+
+            $html = $t::wrap(
+                "¡Te han adelantado en el ranking!",
+                $body,
+                $courseurl->out(false),
+                "Ir al curso y practicar",
+                '#fd7e14'
+            );
+        } else {
+            $html = '<p>' . nl2br(s($plaintext)) . '</p>';
+        }
 
         $message = new \core\message\message();
         $message->component = 'block_ranking';
         $message->name = 'ranking_update';
         $message->userfrom = \core_user::get_noreply_user();
-        $message->userto = $userid;
-        $message->subject = get_string('ranking', 'block_ranking');
-        $message->fullmessage = get_string('notification_overtaken', 'block_ranking', $a);
-        $message->fullmessageformat = FORMAT_PLAIN;
-        $message->fullmessagehtml = '<p>' . get_string('notification_overtaken', 'block_ranking', $a) . '</p>';
-        $message->smallmessage = get_string('notification_overtaken', 'block_ranking', $a);
+        $message->userto = $user;
+        $message->subject = $subject;
+        $message->fullmessage = $plaintext;
+        $message->fullmessageformat = FORMAT_HTML;
+        $message->fullmessagehtml = $html;
+        $message->smallmessage = "📊 {$overtakername} te ha adelantado en {$course->fullname}";
         $message->notification = 1;
-        $message->contexturl = new \moodle_url('/course/view.php', ['id' => $courseid]);
+        $message->contexturl = $courseurl;
         $message->contexturlname = $course->fullname;
         $message->courseid = $courseid;
 

@@ -91,6 +91,8 @@ class weekly_summary extends \core\task\scheduled_task {
         $position = 0;
         $lastpoints = null;
         $sent = 0;
+        $usetemplate = class_exists('\local_achievements\email_template');
+        $reporturl = new \moodle_url('/blocks/ranking/report.php', ['courseid' => $courseid]);
 
         foreach ($rankedusers as $record) {
             if ($lastpoints === null || (float) $record->points < $lastpoints) {
@@ -98,24 +100,81 @@ class weekly_summary extends \core\task\scheduled_task {
                 $lastpoints = (float) $record->points;
             }
 
-            $a = new \stdClass();
-            $a->coursename = $course->fullname;
-            $a->position = $position;
-            $a->points = $record->points;
+            $user = \core_user::get_user($record->userid, '*', MUST_EXIST);
+
+            // Podium emoji based on position.
+            if ($position === 1) {
+                $posemoji = '🥇';
+            } else if ($position === 2) {
+                $posemoji = '🥈';
+            } else if ($position === 3) {
+                $posemoji = '🥉';
+            } else {
+                $posemoji = '🏅';
+            }
+
+            // Plain text (engaging version).
+            $plaintext = "¡Hola {$user->firstname}!\n\n"
+                . "{$posemoji} Tu posición en el ranking de {$course->fullname}: #{$position} con {$record->points} puntos.\n\n";
+            if ($position <= 3) {
+                $plaintext .= "¡Increíble! Estás en el podio. ¡Sigue así para mantener tu posición!\n";
+            } else if ($position <= 10) {
+                $plaintext .= "¡Estás en el TOP 10! Un poco más de esfuerzo y llegarás al podio.\n";
+            } else {
+                $plaintext .= "¡Cada punto cuenta! Sigue practicando para escalar posiciones.\n";
+            }
+            $plaintext .= "\nConsulta el ranking completo: " . $reporturl->out(false);
+
+            // Subject with emoji and firstname.
+            $subject = "{$posemoji} {$user->firstname}, eres #{$position} en {$course->fullname}";
+
+            // Build HTML.
+            if ($usetemplate) {
+                $t = '\local_achievements\email_template';
+
+                // Motivational message based on position.
+                if ($position === 1) {
+                    $motivational = "🔥 ¡Eres el líder indiscutible! Nadie te supera.";
+                } else if ($position <= 3) {
+                    $motivational = "🏆 ¡Estás en el podio! Sigue así para mantener tu posición.";
+                } else if ($position <= 10) {
+                    $motivational = "💪 ¡Estás en el TOP 10! Un poco más y llegas al podio.";
+                } else {
+                    $motivational = "🚀 ¡Cada punto cuenta! Sigue practicando para escalar posiciones.";
+                }
+
+                $body = $t::text("¡Hola <strong>{$user->firstname}</strong>! Aquí tienes tu resumen semanal del ranking.")
+                    . $t::divider()
+                    . $t::stat_row([
+                        [$posemoji, "#{$position}", 'Tu posición'],
+                        ['⭐', number_format($record->points, 0, ',', '.'), 'Puntos totales'],
+                    ])
+                    . $t::highlight($motivational)
+                    . $t::text("Curso: <strong>{$course->fullname}</strong>");
+
+                $html = $t::wrap(
+                    "Resumen semanal del ranking",
+                    $body,
+                    $reporturl->out(false),
+                    "Ver ranking completo",
+                    '#667eea'
+                );
+            } else {
+                $html = '<p>' . nl2br(s($plaintext)) . '</p>';
+            }
 
             $message = new \core\message\message();
             $message->component = 'block_ranking';
             $message->name = 'ranking_update';
             $message->userfrom = \core_user::get_noreply_user();
-            $message->userto = $record->userid;
-            $message->subject = get_string('ranking', 'block_ranking');
-            $message->fullmessage = get_string('notification_weekly_summary', 'block_ranking', $a);
-            $message->fullmessageformat = FORMAT_PLAIN;
-            $message->fullmessagehtml = '<p>' .
-                get_string('notification_weekly_summary', 'block_ranking', $a) . '</p>';
-            $message->smallmessage = get_string('notification_weekly_summary', 'block_ranking', $a);
+            $message->userto = $user;
+            $message->subject = $subject;
+            $message->fullmessage = $plaintext;
+            $message->fullmessageformat = FORMAT_HTML;
+            $message->fullmessagehtml = $html;
+            $message->smallmessage = "{$posemoji} #{$position} en {$course->fullname} con {$record->points} pts";
             $message->notification = 1;
-            $message->contexturl = new \moodle_url('/blocks/ranking/report.php', ['courseid' => $courseid]);
+            $message->contexturl = $reporturl;
             $message->contexturlname = $course->fullname;
             $message->courseid = $courseid;
 
