@@ -143,14 +143,16 @@ class weekly_summary extends \core\task\scheduled_task {
                     $motivational = "🚀 ¡Cada punto cuenta! Sigue practicando para escalar posiciones.";
                 }
 
-                $body = $t::text("¡Hola <strong>{$user->firstname}</strong>! Aquí tienes tu resumen semanal del ranking.")
+                $safefirst = s($user->firstname);
+                $safecourse = s($course->fullname);
+                $body = $t::text("¡Hola <strong>{$safefirst}</strong>! Aquí tienes tu resumen semanal del ranking.")
                     . $t::divider()
                     . $t::stat_row([
                         [$posemoji, "#{$position}", 'Tu posición'],
                         ['⭐', number_format($record->points, 0, ',', '.'), 'Puntos totales'],
                     ])
                     . $t::highlight($motivational)
-                    . $t::text("Curso: <strong>{$course->fullname}</strong>");
+                    . $t::text("Curso: <strong>{$safecourse}</strong>");
 
                 $html = $t::wrap(
                     "Resumen semanal del ranking",

@@ -87,14 +87,16 @@ class notification_manager {
         if ($usetemplate) {
             $t = '\local_achievements\email_template';
 
-            $body = $t::text("🎉 <strong>¡Enhorabuena {$user->firstname}!</strong>", 'center', true)
+            $safefirst = s($user->firstname);
+            $safecourse = s($course->fullname);
+            $body = $t::text("🎉 <strong>¡Enhorabuena {$safefirst}!</strong>", 'center', true)
                 . $t::highlight("{$posemoji} {$postitle} en el ranking")
                 . $t::stat_row([
                     [$posemoji, "#{$pos}", 'Tu posición'],
                     ['⭐', number_format($points, 0, ',', '.'), 'Puntos'],
                 ])
                 . $t::divider()
-                . $t::text("Has llegado al <strong>TOP 3</strong> en <strong>{$course->fullname}</strong>. ¡Estás entre los mejores!")
+                . $t::text("Has llegado al <strong>TOP 3</strong> en <strong>{$safecourse}</strong>. ¡Estás entre los mejores!")
                 . $t::text("💪 ¡Sigue practicando para mantener tu puesto en el podio!");
 
             $html = $t::wrap(
@@ -173,14 +175,17 @@ class notification_manager {
         if ($usetemplate) {
             $t = '\local_achievements\email_template';
 
-            $body = $t::text("¡Hola <strong>{$user->firstname}</strong>!")
-                . $t::highlight("📊 <strong>{$overtakername}</strong> te ha adelantado en el ranking")
+            $safefirst = s($user->firstname);
+            $safeovertaker = s($overtakername);
+            $safecourse = s($course->fullname);
+            $body = $t::text("¡Hola <strong>{$safefirst}</strong>!")
+                . $t::highlight("📊 <strong>{$safeovertaker}</strong> te ha adelantado en el ranking")
                 . $t::stat_row([
                     ['📍', "#{$currentpos}", 'Tu posición actual'],
                     ['⭐', number_format($points, 0, ',', '.'), 'Tus puntos'],
                 ])
                 . $t::divider()
-                . $t::text("En el curso <strong>{$course->fullname}</strong>.")
+                . $t::text("En el curso <strong>{$safecourse}</strong>.")
                 . $t::text("💪 ¡No te rindas! Completa más actividades para recuperar tu posición.")
                 . $t::text("🚀 ¡Tú puedes!");
 
