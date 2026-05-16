@@ -96,6 +96,8 @@ $string['notification_weekly_summary'] = 'Your ranking position in {$a->coursena
 
 // Scheduled tasks.
 $string['task_weekly_summary'] = 'Send weekly ranking position summaries';
+$string['pacing_usec'] = 'Microseconds between weekly summary deliveries';
+$string['pacing_usec_desc'] = 'Pause inserted between each message_send() during the weekly_summary cron task. 1500000 = 1.5 seconds (recommended). Set to 0 to disable. Prevents sub-second SMTP bursts that have historically triggered Microsoft S3115/S3140 blocklists.';
 
 // Events.
 $string['event_points_awarded'] = 'Ranking points awarded';

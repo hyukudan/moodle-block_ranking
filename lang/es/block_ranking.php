@@ -16,17 +16,14 @@
 
 
 /**
- * Ranking block version details
+ * Ranking block spanish language translation.
+ *
+ * Only strings that need a Spanish override are listed here; the rest
+ * fall back to the English file automatically.
  *
  * @package    block_ranking
- * @copyright  2017 Willian Mano http://conecti.me
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->version   = 2026051601;
-$plugin->requires  = 2024100700;
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'Version for Moodle 4.5+ with query optimizations, composite index, and configurable pacing_usec between weekly summary deliveries to avoid SMTP bursts (Microsoft S3115/S3140)';
-$plugin->component = 'block_ranking';
+$string['pacing_usec'] = 'Microsegundos entre envíos del resumen semanal';
+$string['pacing_usec_desc'] = 'Pausa entre cada message_send() durante la tarea cron weekly_summary. 1500000 = 1,5 segundos (recomendado). Pon 0 para desactivar. Evita ráfagas sub-segundo que históricamente dispararon los bloqueos S3115/S3140 de Microsoft.';

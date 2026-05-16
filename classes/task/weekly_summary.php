@@ -49,6 +49,15 @@ class weekly_summary extends \core\task\scheduled_task {
     public function execute() {
         global $DB;
 
+        // Pause between deliveries to avoid SMTP bursts (lessons learned: Microsoft
+        // S3115 throttle escalated to S3140 blocklist after sub-second bursts on
+        // Monday mornings). Configurable via the pacing_usec setting; 1.5s default.
+        // 0 is a valid value (disable pacing); get_config returns false when the
+        // setting hasn't been initialised yet, so we check explicitly to keep that
+        // distinction.
+        $pacingraw = get_config('block_ranking', 'pacing_usec');
+        $pacingusec = ($pacingraw === false) ? 1500000 : (int)$pacingraw;
+
         // Get all courses that have ranking points.
         $courseids = $DB->get_fieldset_sql(
             "SELECT DISTINCT courseid FROM {ranking_points}"
@@ -68,7 +77,7 @@ class weekly_summary extends \core\task\scheduled_task {
                 continue;
             }
 
-            $this->send_course_summaries($courseid, $course);
+            $this->send_course_summaries($courseid, $course, $pacingusec);
         }
     }
 
@@ -77,8 +86,9 @@ class weekly_summary extends \core\task\scheduled_task {
      *
      * @param int $courseid
      * @param \stdClass $course
+     * @param int $pacingusec Microseconds to sleep between message_send() calls (0 = disabled).
      */
-    protected function send_course_summaries($courseid, $course) {
+    protected function send_course_summaries($courseid, $course, $pacingusec = 0) {
         global $DB;
 
         // Get all ranked users ordered by points.
@@ -93,6 +103,7 @@ class weekly_summary extends \core\task\scheduled_task {
         $sent = 0;
         $usetemplate = class_exists('\local_achievements\email_template');
         $reporturl = new \moodle_url('/blocks/ranking/report.php', ['courseid' => $courseid]);
+        $remaining = count($rankedusers);
 
         foreach ($rankedusers as $record) {
             if ($lastpoints === null || (float) $record->points < $lastpoints) {
@@ -186,6 +197,11 @@ class weekly_summary extends \core\task\scheduled_task {
             } catch (\Exception $e) {
                 debugging('block_ranking: Failed to send weekly summary to user ' .
                     $record->userid . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
+            }
+
+            // Skip the pause after the last delivery — no point waiting before exiting.
+            if (--$remaining > 0 && $pacingusec > 0) {
+                usleep($pacingusec);
             }
         }
 
