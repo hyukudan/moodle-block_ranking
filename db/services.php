@@ -31,6 +31,7 @@ $functions = [
         'methodname' => 'get_ranking',
         'description' => 'Returns a list of students and rank.',
         'type' => 'read',
+        'ajax' => true,
         'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],
     ],
     'block_ranking_get_user_position' => [
@@ -38,6 +39,7 @@ $functions = [
         'methodname' => 'execute',
         'description' => 'Returns the current user ranking position and points in a course.',
         'type' => 'read',
+        'ajax' => true,
         'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],
     ],
     'block_ranking_get_user_points_history' => [
@@ -45,6 +47,7 @@ $functions = [
         'methodname' => 'execute',
         'description' => 'Returns the points history (log) for a user in a course.',
         'type' => 'read',
+        'ajax' => true,
         'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],
     ],
 ];
