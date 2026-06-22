@@ -82,7 +82,9 @@ define(['jquery', 'core/ajax', 'core/notification'], function($, Ajax, Notificat
             }
         }).fail(function(error) {
             // Silently fail on polling errors — don't disrupt the user.
-            Notification.exception(error);
+            if (window.console && window.console.warn) {
+                window.console.warn('block_ranking: ranking poll failed', error);
+            }
             stopPolling();
         });
     }

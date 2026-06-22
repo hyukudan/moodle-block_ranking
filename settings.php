@@ -96,4 +96,12 @@ if ($ADMIN->fulltree) {
                         '0' => get_string('no', 'block_ranking')
                     )
                 ));
+
+    $settings->add(new admin_setting_configtext(
+        'block_ranking/pacing_usec',
+        get_string('pacing_usec', 'block_ranking'),
+        get_string('pacing_usec_desc', 'block_ranking'),
+        '1500000',
+        PARAM_INT
+    ));
 }

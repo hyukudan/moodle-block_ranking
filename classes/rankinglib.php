@@ -331,8 +331,18 @@ class rankinglib {
             }
 
             $data[$i]->position = $lastpos;
-            $data[$i]->userpic = $OUTPUT->user_picture($data[$i], ['size' => 35, 'alttext' => false]);
             $data[$i]->fullname = fullname($data[$i]);
+
+            // Initials avatar fallback when user has no profile picture.
+            if (empty($data[$i]->picture)) {
+                $colors = ['#7C4DFF', '#00BFA5', '#FF6D00', '#D50000', '#2962FF', '#00C853', '#AA00FF', '#FFD600'];
+                $color = $colors[abs(crc32($data[$i]->fullname)) % count($colors)];
+                $fi = mb_strtoupper(mb_substr($data[$i]->firstname, 0, 1));
+                $li = mb_strtoupper(mb_substr($data[$i]->lastname, 0, 1));
+                $data[$i]->userpic = '<span class="ranking-initials" style="background:' . $color . '">' . s($fi . $li) . '</span>';
+            } else {
+                $data[$i]->userpic = $OUTPUT->user_picture($data[$i], ['size' => 35, 'alttext' => false]);
+            }
 
             // Medal classes for top 3.
             $data[$i]->isgold = ($lastpos === 1);
