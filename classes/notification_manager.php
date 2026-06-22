@@ -202,7 +202,8 @@ class notification_manager {
                      LEFT JOIN (
                                 SELECT rankingid, SUM(points) AS pointssince
                                   FROM {ranking_logs}
-                                 WHERE timecreated >= :cutoff
+                                 WHERE courseid = :logcourseid
+                                   AND timecreated >= :cutoff
                               GROUP BY rankingid
                                ) later ON later.rankingid = rp.id
                          WHERE rp.courseid = :courseid
@@ -217,6 +218,7 @@ class notification_manager {
 
         $params = array_merge($roleparams, $enroljoin->params, [
             'cutoff' => $cutoff,
+            'logcourseid' => $courseid,
             'courseid' => $courseid,
             'contextid' => $context->id,
         ]);
