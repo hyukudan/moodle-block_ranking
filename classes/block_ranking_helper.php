@@ -141,6 +141,110 @@ class block_ranking_helper {
     }
 
     /**
+     * Check whether the user is staff for the course.
+     *
+     * @param int $userid
+     * @param int $courseid
+     * @return bool
+     */
+    public static function is_staff($userid, $courseid) {
+        if (empty($userid) || empty($courseid)) {
+            return false;
+        }
+
+        if (is_siteadmin($userid)) {
+            return true;
+        }
+
+        $coursecontext = \context_course::instance($courseid, IGNORE_MISSING);
+        if (!$coursecontext) {
+            return false;
+        }
+
+        return has_capability('moodle/course:update', $coursecontext, $userid);
+    }
+
+    /**
+     * Get site administrator user IDs.
+     *
+     * @return int[]
+     */
+    public static function get_site_admin_ids() {
+        global $CFG;
+
+        if (empty($CFG->siteadmins)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('intval', explode(',', $CFG->siteadmins))));
+    }
+
+    /**
+     * Get role IDs that grant course update capability in the supplied context.
+     *
+     * @param \context|null $context
+     * @return int[]
+     */
+    public static function get_staff_role_ids($context = null) {
+        static $cachedids = [];
+
+        $cachekey = $context ? $context->id : 0;
+        if (isset($cachedids[$cachekey])) {
+            return $cachedids[$cachekey];
+        }
+
+        $roles = get_roles_with_capability('moodle/course:update', CAP_ALLOW, $context);
+        $cachedids[$cachekey] = array_map('intval', array_keys($roles));
+
+        return $cachedids[$cachekey];
+    }
+
+    /**
+     * Build SQL to exclude site admins and users with staff roles in a course context.
+     *
+     * This is a cheap defensive filter for leaderboard queries. Exact capability
+     * evaluation remains in the award path and the purge CLI.
+     *
+     * @param string $useridexpr SQL expression that resolves to the user ID.
+     * @param \context_course $context Course context.
+     * @param string $prefix Unique parameter prefix.
+     * @return array SQL fragment and named parameters.
+     */
+    public static function get_staff_exclusion_sql($useridexpr, \context_course $context, $prefix = 'staff') {
+        global $DB;
+
+        $conditions = [];
+        $params = [];
+
+        $adminids = self::get_site_admin_ids();
+        if (!empty($adminids)) {
+            list($adminsql, $adminparams) = $DB->get_in_or_equal($adminids, SQL_PARAMS_NAMED, $prefix . 'admin', false);
+            $conditions[] = "{$useridexpr} {$adminsql}";
+            $params = array_merge($params, $adminparams);
+        }
+
+        $roleids = self::get_staff_role_ids($context);
+        if (!empty($roleids)) {
+            list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, $prefix . 'role');
+            $conditions[] = "NOT EXISTS (
+                    SELECT 1
+                      FROM {role_assignments} {$prefix}ra
+                     WHERE {$prefix}ra.userid = {$useridexpr}
+                       AND {$prefix}ra.contextid = :{$prefix}contextid
+                       AND {$prefix}ra.roleid {$rolesql}
+                )";
+            $params = array_merge($params, $roleparams);
+            $params[$prefix . 'contextid'] = $context->id;
+        }
+
+        if (empty($conditions)) {
+            return ['', []];
+        }
+
+        return [" AND " . implode("\n                AND ", $conditions), $params];
+    }
+
+    /**
      * Verify if the user is a student in the given course.
      *
      * @param int $userid

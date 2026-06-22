@@ -186,5 +186,10 @@ function xmldb_block_ranking_upgrade($oldversion, $block) {
         upgrade_plugin_savepoint(true, 2026062200, 'block', 'ranking');
     }
 
+    if ($oldversion < 2026062202) {
+        // Code-only upgrade: staff users are excluded from new ranking awards.
+        upgrade_plugin_savepoint(true, 2026062202, 'block', 'ranking');
+    }
+
     return true;
 }

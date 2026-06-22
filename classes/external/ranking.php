@@ -96,6 +96,7 @@ class ranking extends external_api {
                 }
 
                 list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+                list($staffsql, $staffparams) = block_ranking_helper::get_staff_exclusion_sql('u.id', $context, 'extstaff');
 
                 $userfields = \user_picture::fields('u', ['username']);
                 $from = "FROM {user} u
@@ -106,9 +107,10 @@ class ranking extends external_api {
                 $where = "WHERE a.contextid = :contextid
                         AND a.userid = u.id
                         AND a.roleid $rolesql
-                        AND c.instanceid = :courseid";
+                        AND c.instanceid = :courseid
+                        $staffsql";
 
-                $params = array_merge($roleparams, [
+                $params = array_merge($roleparams, $staffparams, [
                     'contextid' => $context->id,
                     'courseid' => $course->id,
                     'r_courseid' => $course->id,

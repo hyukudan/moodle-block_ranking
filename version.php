@@ -25,7 +25,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026062201; // daily digest reliability+coverage: send before sent=1; cover overtaken-inactive users via day-start/end snapshots
+$plugin->version   = 2026062202; // Exclude staff from ranking awards and add staff purge CLI.
 $plugin->requires  = 2024100700;
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = 'Version for Moodle 4.5+ with query optimizations, composite index, and configurable pacing_usec between weekly summary deliveries to avoid SMTP bursts (Microsoft S3115/S3140)';

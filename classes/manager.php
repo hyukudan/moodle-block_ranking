@@ -121,6 +121,10 @@ class manager {
     protected static function add_default_points($completion, $points = null, $grade = null) {
         global $DB;
 
+        if (block_ranking_helper::is_staff($completion->userid, $completion->course)) {
+            return;
+        }
+
         if ((!isset($points)) || trim($points) == '') {
             $points = self::DEFAULT_POINTS;
         }

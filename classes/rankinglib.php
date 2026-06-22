@@ -99,6 +99,7 @@ class rankinglib {
         }
 
         list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+        list($staffsql, $staffparams) = block_ranking_helper::get_staff_exclusion_sql('u.id', $context, 'countstaff');
 
         $sql = "SELECT COUNT(DISTINCT u.id)
             FROM {user} u
@@ -106,7 +107,7 @@ class rankinglib {
             INNER JOIN {ranking_points} r ON r.userid = u.id AND r.courseid = :r_courseid
             INNER JOIN {context} c ON c.id = a.contextid";
 
-        $params = array_merge($roleparams, [
+        $params = array_merge($roleparams, $staffparams, [
             'contextid' => $context->id,
             'courseid' => $COURSE->id,
             'r_courseid' => $COURSE->id,
@@ -119,7 +120,8 @@ class rankinglib {
 
         $sql .= " WHERE a.contextid = :contextid
             AND a.roleid $rolesql
-            AND c.instanceid = :courseid";
+            AND c.instanceid = :courseid
+            $staffsql";
 
         return $DB->count_records_sql($sql, $params);
     }
@@ -142,6 +144,7 @@ class rankinglib {
         }
 
         list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+        list($staffsql, $staffparams) = block_ranking_helper::get_staff_exclusion_sql('u.id', $context, 'datedcountstaff');
 
         $sql = "SELECT COUNT(DISTINCT u.id)
             FROM {user} u
@@ -152,9 +155,10 @@ class rankinglib {
             WHERE a.contextid = :contextid
             AND a.roleid $rolesql
             AND c.instanceid = :courseid
-            AND rl.timecreated BETWEEN :datestart AND :dateend";
+            AND rl.timecreated BETWEEN :datestart AND :dateend
+            $staffsql";
 
-        $params = array_merge($roleparams, [
+        $params = array_merge($roleparams, $staffparams, [
             'contextid' => $context->id,
             'courseid' => $COURSE->id,
             'r_courseid' => $COURSE->id,
@@ -194,6 +198,7 @@ class rankinglib {
             }
 
             list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+            list($staffsql, $staffparams) = block_ranking_helper::get_staff_exclusion_sql('u.id', $context, 'liststaff');
 
             $userfields = user_picture::fields('u', ['username']);
             $sql = "SELECT $userfields, r.points
@@ -203,7 +208,7 @@ class rankinglib {
                 INNER JOIN {ranking_points} r ON r.userid = u.id AND r.courseid = :r_courseid
                 INNER JOIN {context} c ON c.id = a.contextid";
 
-            $params = array_merge($roleparams, [
+            $params = array_merge($roleparams, $staffparams, [
                 'contextid' => $context->id,
                 'courseid' => $COURSE->id,
                 'r_courseid' => $COURSE->id
@@ -218,6 +223,7 @@ class rankinglib {
             $sql .= " WHERE a.contextid = :contextid
                 AND a.roleid $rolesql
                 AND c.instanceid = :courseid
+                $staffsql
                 ORDER BY r.points DESC, u.firstname ASC";
 
             $users = array_values($DB->get_records_sql($sql, $params, $offset, $limit));
@@ -259,6 +265,7 @@ class rankinglib {
             }
 
             list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+            list($staffsql, $staffparams) = block_ranking_helper::get_staff_exclusion_sql('u.id', $context, 'datedliststaff');
 
             $userfields = user_picture::fields('u', ['username']);
             $sql = "SELECT $userfields,
@@ -273,10 +280,11 @@ class rankinglib {
                 AND a.roleid $rolesql
                 AND c.instanceid = :courseid
                 AND rl.timecreated BETWEEN :datestart AND :dateend
+                $staffsql
                 GROUP BY u.id, $userfields
                 ORDER BY points DESC, u.firstname ASC";
 
-            $params = array_merge($roleparams, [
+            $params = array_merge($roleparams, $staffparams, [
                 'contextid' => $context->id,
                 'courseid' => $COURSE->id,
                 'r_courseid' => $COURSE->id,

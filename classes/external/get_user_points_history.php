@@ -23,6 +23,7 @@
  */
 namespace block_ranking\external;
 
+use block_ranking\block_ranking_helper;
 use core\context\course as context_course;
 use core_external\external_api;
 use core_external\external_function_parameters;
@@ -71,6 +72,10 @@ class get_user_points_history extends external_api {
         require_login($courseid);
         $context = context_course::instance($courseid);
         self::validate_context($context);
+
+        if (block_ranking_helper::is_staff($USER->id, $courseid)) {
+            return ['entries' => []];
+        }
 
         $sql = "SELECT rl.id, rl.points, rl.timecreated, rl.course_modules_completion,
                        m.name as modulename, cm.instance
