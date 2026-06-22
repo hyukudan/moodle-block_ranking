@@ -203,7 +203,7 @@ class block_ranking_helper {
      * Build SQL to exclude site admins and users with staff roles in a course context.
      *
      * This is a cheap defensive filter for leaderboard queries. Exact capability
-     * evaluation remains in the award path and the purge CLI.
+     * evaluation remains in the award path.
      *
      * @param string $useridexpr SQL expression that resolves to the user ID.
      * @param \context_course $context Course context.
@@ -223,19 +223,35 @@ class block_ranking_helper {
             $params = array_merge($params, $adminparams);
         }
 
-        $roleids = self::get_staff_role_ids($context);
-        if (!empty($roleids)) {
-            list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, $prefix . 'role');
-            $conditions[] = "NOT EXISTS (
+        $assignmentpathmatch = $DB->sql_like(
+            ":{$prefix}rapath",
+            $DB->sql_concat("{$prefix}ractx.path", ":{$prefix}rapathsuffix")
+        );
+        $capabilitypathmatch = $DB->sql_like(
+            ":{$prefix}rcpath",
+            $DB->sql_concat("{$prefix}rcctx.path", ":{$prefix}rcpathsuffix")
+        );
+
+        $conditions[] = "NOT EXISTS (
                     SELECT 1
                       FROM {role_assignments} {$prefix}ra
+                      JOIN {context} {$prefix}ractx ON {$prefix}ractx.id = {$prefix}ra.contextid
+                      JOIN {role_capabilities} {$prefix}rc ON {$prefix}rc.roleid = {$prefix}ra.roleid
+                      JOIN {context} {$prefix}rcctx ON {$prefix}rcctx.id = {$prefix}rc.contextid
                      WHERE {$prefix}ra.userid = {$useridexpr}
-                       AND {$prefix}ra.contextid = :{$prefix}contextid
-                       AND {$prefix}ra.roleid {$rolesql}
+                       AND {$prefix}rc.capability = :{$prefix}capability
+                       AND {$prefix}rc.permission = :{$prefix}permission
+                       AND (:{$prefix}raexactpath = {$prefix}ractx.path OR {$assignmentpathmatch})
+                       AND (:{$prefix}rcexactpath = {$prefix}rcctx.path OR {$capabilitypathmatch})
                 )";
-            $params = array_merge($params, $roleparams);
-            $params[$prefix . 'contextid'] = $context->id;
-        }
+        $params[$prefix . 'capability'] = 'moodle/course:update';
+        $params[$prefix . 'permission'] = CAP_ALLOW;
+        $params[$prefix . 'raexactpath'] = $context->path;
+        $params[$prefix . 'rapath'] = $context->path;
+        $params[$prefix . 'rapathsuffix'] = '/%';
+        $params[$prefix . 'rcexactpath'] = $context->path;
+        $params[$prefix . 'rcpath'] = $context->path;
+        $params[$prefix . 'rcpathsuffix'] = '/%';
 
         if (empty($conditions)) {
             return ['', []];
