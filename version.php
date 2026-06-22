@@ -25,7 +25,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026051601;
+$plugin->version   = 2026062200; // daily ranking digest: replace per-event notifications with one aggregated daily digest
 $plugin->requires  = 2024100700;
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = 'Version for Moodle 4.5+ with query optimizations, composite index, and configurable pacing_usec between weekly summary deliveries to avoid SMTP bursts (Microsoft S3115/S3140)';

@@ -26,6 +26,15 @@ defined('MOODLE_INTERNAL') || die();
 
 $tasks = [
     [
+        'classname' => 'block_ranking\task\daily_ranking_digest',
+        'blocking' => 0,
+        'minute' => '30',
+        'hour' => '0',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '*',
+    ],
+    [
         'classname' => 'block_ranking\task\weekly_summary',
         'blocking' => 0,
         'minute' => '0',

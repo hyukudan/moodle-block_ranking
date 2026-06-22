@@ -144,6 +144,8 @@ class manager {
             }
         }
 
+        notification_manager::mark_daily_state($completion->userid, $completion->course);
+
         $transaction = $DB->start_delegated_transaction();
         try {
             $rankingid = self::add_or_update_user_points($completion->userid, $completion->course, $points);
@@ -160,95 +162,6 @@ class manager {
 
         // Fire custom event for integration with other plugins.
         self::fire_points_awarded_event($completion->userid, $completion->course, $points, $rankingid);
-
-        // Check if user entered top 3 and send notification.
-        self::check_and_notify_ranking_change($completion->userid, $completion->course);
-    }
-
-    /**
-     * Check if a user's ranking changed and send notifications.
-     *
-     * Uses cache to track the last notified position per user/course to avoid
-     * spamming notifications when the user's position hasn't changed.
-     *
-     * @param int $userid
-     * @param int $courseid
-     */
-    protected static function check_and_notify_ranking_change($userid, $courseid) {
-        global $DB;
-
-        if (!$DB->record_exists('ranking_points', ['userid' => $userid, 'courseid' => $courseid])) {
-            return;
-        }
-
-        // Get the user's current position.
-        $sql = "SELECT COUNT(*) + 1 as position
-                  FROM {ranking_points}
-                 WHERE courseid = :courseid AND points > (
-                     SELECT points FROM {ranking_points}
-                      WHERE userid = :userid AND courseid = :crsid
-                 )";
-        $params = ['courseid' => $courseid, 'userid' => $userid, 'crsid' => $courseid];
-        $result = $DB->get_record_sql($sql, $params);
-
-        if (!$result) {
-            return;
-        }
-
-        $currentpos = (int) $result->position;
-
-        // Get the last notified position from cache to avoid duplicates.
-        $cache = \cache::make('block_ranking', 'user_points');
-        $cachekey = "notified_pos_{$userid}_{$courseid}";
-        $lastnotifiedpos = $cache->get($cachekey);
-
-        // If position hasn't changed, skip all notifications.
-        if ($lastnotifiedpos !== false && (int) $lastnotifiedpos === $currentpos) {
-            return;
-        }
-
-        $previouspos = ($lastnotifiedpos !== false) ? (int) $lastnotifiedpos : null;
-
-        // Notify top 3 entry (only if they just entered top 3, not if they were already there).
-        if ($currentpos <= 3 && ($previouspos === null || $previouspos > 3)) {
-            notification_manager::notify_top3($userid, $courseid);
-        }
-
-        // Detect if user overtook someone: find users just below them who were ahead before.
-        if ($previouspos !== null && $currentpos < $previouspos) {
-            self::notify_overtaken_users($userid, $courseid, $currentpos, $previouspos);
-        }
-
-        // Update cached position.
-        $cache->set($cachekey, $currentpos);
-    }
-
-    /**
-     * Notify users who were overtaken by the given user.
-     *
-     * @param int $userid The user who moved up.
-     * @param int $courseid The course.
-     * @param int $newpos The user's new position.
-     * @param int $oldpos The user's previous position.
-     */
-    protected static function notify_overtaken_users($userid, $courseid, $newpos, $oldpos) {
-        global $DB;
-
-        // Only fetch users in affected positions (newpos to oldpos-1), max 3.
-        $limit = min($oldpos - $newpos, 3);
-        $offset = max($newpos - 1, 0); // 0-indexed offset from top.
-
-        $sql = "SELECT rp.userid
-                  FROM {ranking_points} rp
-                 WHERE rp.courseid = :courseid
-                   AND rp.userid != :userid
-                 ORDER BY rp.points DESC";
-        $params = ['courseid' => $courseid, 'userid' => $userid];
-        $affectedusers = $DB->get_records_sql($sql, $params, $offset, $limit);
-
-        foreach ($affectedusers as $record) {
-            notification_manager::notify_overtaken($record->userid, $userid, $courseid);
-        }
     }
 
     /**
