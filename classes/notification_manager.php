@@ -449,25 +449,25 @@ class notification_manager {
         ) + 1;
 
         if ($pos === 1) {
-            $posemoji = '🥇';
+            $posemoji = '';
             $postitle = '¡PRIMER PUESTO!';
         } else if ($pos === 2) {
-            $posemoji = '🥈';
+            $posemoji = '';
             $postitle = '¡SEGUNDO PUESTO!';
         } else {
-            $posemoji = '🥉';
+            $posemoji = '';
             $postitle = '¡TERCER PUESTO!';
         }
 
         // Plain text (engaging).
-        $plaintext = "🎉 ¡Enhorabuena {$user->firstname}!\n\n"
-            . "{$posemoji} {$postitle}\n\n"
+        $plaintext = "¡Enhorabuena {$user->firstname}!\n\n"
+            . "{$postitle}\n\n"
             . "Has llegado al TOP 3 del ranking en {$course->fullname}.\n"
             . "Posición: #{$pos} | Puntos: {$points}\n\n"
             . "¡Sigue así! Estás entre los mejores.\n\n"
             . "Ver el curso: " . $courseurl->out(false);
 
-        $subject = "🥇 ¡{$user->firstname}, estás en el TOP 3!";
+        $subject = "¡{$user->firstname}, estás en el TOP 3!";
 
         // Build HTML.
         $usetemplate = class_exists('\local_achievements\email_template');
@@ -476,15 +476,15 @@ class notification_manager {
 
             $safefirst = s($user->firstname);
             $safecourse = s($course->fullname);
-            $body = $t::text("🎉 <strong>¡Enhorabuena {$safefirst}!</strong>", 'center', true)
-                . $t::highlight("{$posemoji} {$postitle} en el ranking")
+            $body = $t::text("<strong>¡Enhorabuena {$safefirst}!</strong>", 'center', true)
+                . $t::highlight("{$postitle} en el ranking")
                 . $t::stat_row([
                     [$posemoji, "#{$pos}", 'Tu posición'],
-                    ['⭐', number_format($points, 0, ',', '.'), 'Puntos'],
+                    ['', number_format($points, 0, ',', '.'), 'Puntos'],
                 ])
                 . $t::divider()
                 . $t::text("Has llegado al <strong>TOP 3</strong> en <strong>{$safecourse}</strong>. ¡Estás entre los mejores!")
-                . $t::text("💪 ¡Sigue practicando para mantener tu puesto en el podio!");
+                . $t::text("¡Sigue practicando para mantener tu puesto en el podio!");
 
             $html = $t::wrap(
                 "¡Estás en el TOP 3!",
@@ -506,7 +506,7 @@ class notification_manager {
         $message->fullmessage = $plaintext;
         $message->fullmessageformat = FORMAT_HTML;
         $message->fullmessagehtml = $html;
-        $message->smallmessage = "{$posemoji} ¡{$user->firstname}, estás en el TOP 3 de {$course->fullname}!";
+        $message->smallmessage = "¡{$user->firstname}, estás en el TOP 3 de {$course->fullname}!";
         $message->notification = 1;
         $message->contexturl = $courseurl;
         $message->contexturlname = $course->fullname;
@@ -550,12 +550,12 @@ class notification_manager {
 
         // Plain text (engaging).
         $plaintext = "¡Hola {$user->firstname}!\n\n"
-            . "📊 {$overtakername} te ha adelantado en el ranking de {$course->fullname}.\n\n"
+            . "{$overtakername} te ha adelantado en el ranking de {$course->fullname}.\n\n"
             . "Tu posición actual: #{$currentpos} | Tus puntos: {$points}\n\n"
             . "¡No te rindas! Completa más actividades para recuperar tu posición.\n\n"
             . "Ver el curso: " . $courseurl->out(false);
 
-        $subject = "📊 ¡{$user->firstname}, {$overtakername} te ha adelantado!";
+        $subject = "¡{$user->firstname}, {$overtakername} te ha adelantado!";
 
         // Build HTML.
         $usetemplate = class_exists('\local_achievements\email_template');
@@ -566,15 +566,15 @@ class notification_manager {
             $safeovertaker = s($overtakername);
             $safecourse = s($course->fullname);
             $body = $t::text("¡Hola <strong>{$safefirst}</strong>!")
-                . $t::highlight("📊 <strong>{$safeovertaker}</strong> te ha adelantado en el ranking")
+                . $t::highlight("<strong>{$safeovertaker}</strong> te ha adelantado en el ranking")
                 . $t::stat_row([
-                    ['📍', "#{$currentpos}", 'Tu posición actual'],
-                    ['⭐', number_format($points, 0, ',', '.'), 'Tus puntos'],
+                    ['', "#{$currentpos}", 'Tu posición actual'],
+                    ['', number_format($points, 0, ',', '.'), 'Tus puntos'],
                 ])
                 . $t::divider()
                 . $t::text("En el curso <strong>{$safecourse}</strong>.")
-                . $t::text("💪 ¡No te rindas! Completa más actividades para recuperar tu posición.")
-                . $t::text("🚀 ¡Tú puedes!");
+                . $t::text("¡No te rindas! Completa más actividades para recuperar tu posición.")
+                . $t::text("¡Tú puedes!");
 
             $html = $t::wrap(
                 "¡Te han adelantado en el ranking!",
@@ -596,7 +596,7 @@ class notification_manager {
         $message->fullmessage = $plaintext;
         $message->fullmessageformat = FORMAT_HTML;
         $message->fullmessagehtml = $html;
-        $message->smallmessage = "📊 {$overtakername} te ha adelantado en {$course->fullname}";
+        $message->smallmessage = "{$overtakername} te ha adelantado en {$course->fullname}";
         $message->notification = 1;
         $message->contexturl = $courseurl;
         $message->contexturlname = $course->fullname;
