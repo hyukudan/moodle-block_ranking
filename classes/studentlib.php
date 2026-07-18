@@ -111,6 +111,10 @@ class studentlib {
 
         $context = \context_course::instance($COURSE->id);
 
+        if (block_ranking_helper::is_staff($USER->id, $COURSE->id)) {
+            return false;
+        }
+
         $roleids = block_ranking_helper::get_student_role_ids();
         if (empty($roleids)) {
             return false;

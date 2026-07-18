@@ -141,6 +141,126 @@ class block_ranking_helper {
     }
 
     /**
+     * Check whether the user is staff for the course.
+     *
+     * @param int $userid
+     * @param int $courseid
+     * @return bool
+     */
+    public static function is_staff($userid, $courseid) {
+        if (empty($userid) || empty($courseid)) {
+            return false;
+        }
+
+        if (is_siteadmin($userid)) {
+            return true;
+        }
+
+        $coursecontext = \context_course::instance($courseid, IGNORE_MISSING);
+        if (!$coursecontext) {
+            return false;
+        }
+
+        return has_capability('moodle/course:update', $coursecontext, $userid);
+    }
+
+    /**
+     * Get site administrator user IDs.
+     *
+     * @return int[]
+     */
+    public static function get_site_admin_ids() {
+        global $CFG;
+
+        if (empty($CFG->siteadmins)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('intval', explode(',', $CFG->siteadmins))));
+    }
+
+    /**
+     * Get role IDs that grant course update capability in the supplied context.
+     *
+     * @param \context|null $context
+     * @return int[]
+     */
+    public static function get_staff_role_ids($context = null) {
+        static $cachedids = [];
+
+        $cachekey = $context ? $context->id : 0;
+        if (isset($cachedids[$cachekey])) {
+            return $cachedids[$cachekey];
+        }
+
+        $roles = get_roles_with_capability('moodle/course:update', CAP_ALLOW, $context);
+        $cachedids[$cachekey] = array_map('intval', array_keys($roles));
+
+        return $cachedids[$cachekey];
+    }
+
+    /**
+     * Build SQL to exclude site admins and users with staff roles in a course context.
+     *
+     * This is a cheap defensive filter for leaderboard queries. Exact capability
+     * evaluation remains in the award path.
+     *
+     * @param string $useridexpr SQL expression that resolves to the user ID.
+     * @param \context_course $context Course context.
+     * @param string $prefix Unique parameter prefix.
+     * @return array SQL fragment and named parameters.
+     */
+    public static function get_staff_exclusion_sql($useridexpr, \context_course $context, $prefix = 'staff') {
+        global $DB;
+
+        $conditions = [];
+        $params = [];
+
+        $adminids = self::get_site_admin_ids();
+        if (!empty($adminids)) {
+            list($adminsql, $adminparams) = $DB->get_in_or_equal($adminids, SQL_PARAMS_NAMED, $prefix . 'admin', false);
+            $conditions[] = "{$useridexpr} {$adminsql}";
+            $params = array_merge($params, $adminparams);
+        }
+
+        $assignmentpathmatch = $DB->sql_like(
+            ":{$prefix}rapath",
+            $DB->sql_concat("{$prefix}ractx.path", ":{$prefix}rapathsuffix")
+        );
+        $capabilitypathmatch = $DB->sql_like(
+            ":{$prefix}rcpath",
+            $DB->sql_concat("{$prefix}rcctx.path", ":{$prefix}rcpathsuffix")
+        );
+
+        $conditions[] = "NOT EXISTS (
+                    SELECT 1
+                      FROM {role_assignments} {$prefix}ra
+                      JOIN {context} {$prefix}ractx ON {$prefix}ractx.id = {$prefix}ra.contextid
+                      JOIN {role_capabilities} {$prefix}rc ON {$prefix}rc.roleid = {$prefix}ra.roleid
+                      JOIN {context} {$prefix}rcctx ON {$prefix}rcctx.id = {$prefix}rc.contextid
+                     WHERE {$prefix}ra.userid = {$useridexpr}
+                       AND {$prefix}rc.capability = :{$prefix}capability
+                       AND {$prefix}rc.permission = :{$prefix}permission
+                       AND (:{$prefix}raexactpath = {$prefix}ractx.path OR {$assignmentpathmatch})
+                       AND (:{$prefix}rcexactpath = {$prefix}rcctx.path OR {$capabilitypathmatch})
+                )";
+        $params[$prefix . 'capability'] = 'moodle/course:update';
+        $params[$prefix . 'permission'] = CAP_ALLOW;
+        $params[$prefix . 'raexactpath'] = $context->path;
+        $params[$prefix . 'rapath'] = $context->path;
+        $params[$prefix . 'rapathsuffix'] = '/%';
+        $params[$prefix . 'rcexactpath'] = $context->path;
+        $params[$prefix . 'rcpath'] = $context->path;
+        $params[$prefix . 'rcpathsuffix'] = '/%';
+
+        if (empty($conditions)) {
+            return ['', []];
+        }
+
+        return [" AND " . implode("\n                AND ", $conditions), $params];
+    }
+
+    /**
      * Verify if the user is a student in the given course.
      *
      * @param int $userid

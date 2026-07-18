@@ -25,8 +25,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026051601;
+$plugin->version   = 2026071800; // Reconcile: BS5 + escaping + navy (dev) with daily digest, staff exclusion, gamified UI (prod).
 $plugin->requires  = 2024100700;
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = 'Version for Moodle 4.5+ with query optimizations, composite index, and configurable pacing_usec between weekly summary deliveries to avoid SMTP bursts (Microsoft S3115/S3140)';
+$plugin->release   = 'Version for Moodle 4.5+ with query optimizations, composite index, configurable pacing_usec between deliveries (Microsoft S3115/S3140), daily ranking digest, staff exclusion and gamified Bootstrap 5 notification emails';
 $plugin->component = 'block_ranking';

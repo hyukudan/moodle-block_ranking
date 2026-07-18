@@ -23,6 +23,7 @@
  */
 namespace block_ranking\external;
 
+use block_ranking\block_ranking_helper;
 use core\context\course as context_course;
 use core_external\external_api;
 use core_external\external_function_parameters;
@@ -65,12 +66,46 @@ class get_user_position extends external_api {
         $context = context_course::instance($courseid);
         self::validate_context($context);
 
+        if (block_ranking_helper::is_staff($USER->id, $courseid)) {
+            return [
+                'position' => 0,
+                'points' => 0,
+                'totalstudents' => 0,
+            ];
+        }
+
+        $roleids = block_ranking_helper::get_student_role_ids();
+        if (empty($roleids)) {
+            return [
+                'position' => 0,
+                'points' => 0,
+                'totalstudents' => 0,
+            ];
+        }
+
+        list($rolesql, $roleparams) = $DB->get_in_or_equal($roleids, SQL_PARAMS_NAMED, 'role');
+        list($staffsql, $staffparams) = block_ranking_helper::get_staff_exclusion_sql('u.id', $context, 'positionstaff');
+
         // Get user's points.
-        $userpoints = $DB->get_record('ranking_points', [
+        $sql = "SELECT DISTINCT rp.*
+                  FROM {ranking_points} rp
+                  JOIN {user} u ON u.id = rp.userid
+                  JOIN {role_assignments} ra ON ra.userid = u.id
+                 WHERE rp.userid = :userid
+                   AND rp.courseid = :courseid
+                   AND u.deleted = 0
+                   AND u.suspended = 0
+                   AND ra.contextid = :contextid
+                   AND ra.roleid $rolesql
+                   $staffsql";
+
+        $params = array_merge($roleparams, $staffparams, [
             'userid' => $USER->id,
             'courseid' => $courseid,
+            'contextid' => $context->id,
         ]);
 
+        $userpoints = $DB->get_record_sql($sql, $params);
         if (!$userpoints) {
             return [
                 'position' => 0,
@@ -80,12 +115,49 @@ class get_user_position extends external_api {
         }
 
         // Calculate position.
-        $position = $DB->count_records_sql(
-            "SELECT COUNT(*) FROM {ranking_points} WHERE courseid = :courseid AND points > :points",
-            ['courseid' => $courseid, 'points' => $userpoints->points]
-        ) + 1;
+        list($countstaffsql, $countstaffparams) = block_ranking_helper::get_staff_exclusion_sql(
+            'u.id',
+            $context,
+            'positioncountstaff'
+        );
+        $countsql = "SELECT COUNT(DISTINCT rp.userid)
+                       FROM {ranking_points} rp
+                       JOIN {user} u ON u.id = rp.userid
+                       JOIN {role_assignments} ra ON ra.userid = u.id
+                      WHERE rp.courseid = :courseid
+                        AND rp.points > :points
+                        AND u.deleted = 0
+                        AND u.suspended = 0
+                        AND ra.contextid = :contextid
+                        AND ra.roleid $rolesql
+                        $countstaffsql";
+        $countparams = array_merge($roleparams, $countstaffparams, [
+            'courseid' => $courseid,
+            'points' => $userpoints->points,
+            'contextid' => $context->id,
+        ]);
+        $position = $DB->count_records_sql($countsql, $countparams) + 1;
 
-        $totalstudents = $DB->count_records('ranking_points', ['courseid' => $courseid]);
+        list($totalstaffsql, $totalstaffparams) = block_ranking_helper::get_staff_exclusion_sql(
+            'u.id',
+            $context,
+            'positiontotalstaff'
+        );
+        $totalsql = "SELECT COUNT(DISTINCT rp.userid)
+                       FROM {ranking_points} rp
+                       JOIN {user} u ON u.id = rp.userid
+                       JOIN {role_assignments} ra ON ra.userid = u.id
+                      WHERE rp.courseid = :courseid
+                        AND u.deleted = 0
+                        AND u.suspended = 0
+                        AND ra.contextid = :contextid
+                        AND ra.roleid $rolesql
+                        $totalstaffsql";
+        $totalparams = array_merge($roleparams, $totalstaffparams, [
+            'courseid' => $courseid,
+            'contextid' => $context->id,
+        ]);
+        $totalstudents = $DB->count_records_sql($totalsql, $totalparams);
 
         return [
             'position' => (int) $position,

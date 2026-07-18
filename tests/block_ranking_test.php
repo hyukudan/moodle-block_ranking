@@ -604,6 +604,41 @@ class block_ranking_test extends advanced_testcase {
     }
 
     /**
+     * Test that course staff with a student role still does not receive points.
+     */
+    public function test_staff_with_student_role_does_not_get_points() {
+        global $DB;
+
+        $this->resetAfterTest(true);
+
+        $course = $this->getDataGenerator()->create_course(['enablecompletion' => 1]);
+        $staff = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($staff->id, $course->id, 'student');
+        $this->getDataGenerator()->enrol_user($staff->id, $course->id, 'editingteacher');
+
+        $page = $this->getDataGenerator()->create_module('page', [
+            'course' => $course->id,
+            'completion' => COMPLETION_TRACKING_MANUAL,
+        ]);
+
+        $cmcid = $DB->insert_record('course_modules_completion', (object) [
+            'coursemoduleid' => $page->cmid,
+            'userid' => $staff->id,
+            'completionstate' => 1,
+            'timemodified' => time(),
+        ]);
+
+        manager::add_user_points($cmcid);
+
+        $points = $DB->get_record('ranking_points', [
+            'userid' => $staff->id,
+            'courseid' => $course->id,
+        ]);
+
+        $this->assertFalse($points, 'Course staff should not receive ranking points even with a student role');
+    }
+
+    /**
      * Test that non-completed events (completionstate = 0) do not award points.
      */
     public function test_incomplete_activity_no_points() {

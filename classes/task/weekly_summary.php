@@ -71,28 +71,31 @@ class weekly_summary extends \core\task\scheduled_task {
         list($insql, $inparams) = $DB->get_in_or_equal($courseids);
         $courses = $DB->get_records_select('course', "id $insql", $inparams);
 
+        $summaries = [];
         foreach ($courseids as $courseid) {
             $course = $courses[$courseid] ?? null;
             if (!$course) {
                 continue;
             }
 
-            $this->send_course_summaries($courseid, $course, $pacingusec);
+            $this->collect_course_summaries($courseid, $course, $summaries);
         }
+
+        $this->send_user_summaries($summaries, $pacingusec);
     }
 
     /**
-     * Send weekly summaries for a specific course.
+     * Add weekly summary rows for a specific course, grouped by user.
      *
      * @param int $courseid
      * @param \stdClass $course
-     * @param int $pacingusec Microseconds to sleep between message_send() calls (0 = disabled).
+     * @param array<int, array{userid: int, items: \stdClass[]}> $summaries User summaries.
      */
-    protected function send_course_summaries($courseid, $course, $pacingusec = 0) {
+    protected function collect_course_summaries($courseid, $course, array &$summaries) {
         global $DB;
 
         // Get all ranked users ordered by points.
-        $rankedusers = $DB->get_records('ranking_points', ['courseid' => $courseid], 'points DESC');
+        $rankedusers = $DB->get_records('ranking_points', ['courseid' => $courseid], 'points DESC, userid ASC');
 
         if (empty($rankedusers)) {
             return;
@@ -100,10 +103,11 @@ class weekly_summary extends \core\task\scheduled_task {
 
         $position = 0;
         $lastpoints = null;
-        $sent = 0;
-        $usetemplate = class_exists('\local_achievements\email_template');
         $reporturl = new \moodle_url('/blocks/ranking/report.php', ['courseid' => $courseid]);
-        $remaining = count($rankedusers);
+        $participantcount = count($rankedusers);
+        $coursename = self::compact_course_name(
+            format_string($course->fullname, true, ['context' => \context_course::instance($courseid)])
+        );
 
         foreach ($rankedusers as $record) {
             if ($lastpoints === null || (float) $record->points < $lastpoints) {
@@ -111,100 +115,279 @@ class weekly_summary extends \core\task\scheduled_task {
                 $lastpoints = (float) $record->points;
             }
 
-            $user = \core_user::get_user($record->userid, '*', MUST_EXIST);
-
-            // Podium emoji based on position.
-            if ($position === 1) {
-                $posemoji = '🥇';
-            } else if ($position === 2) {
-                $posemoji = '🥈';
-            } else if ($position === 3) {
-                $posemoji = '🥉';
-            } else {
-                $posemoji = '🏅';
+            $userid = (int)$record->userid;
+            if (!isset($summaries[$userid])) {
+                $summaries[$userid] = [
+                    'userid' => $userid,
+                    'items' => [],
+                ];
             }
 
-            // Plain text (engaging version).
-            $plaintext = "¡Hola {$user->firstname}!\n\n"
-                . "{$posemoji} Tu posición en el ranking de {$course->fullname}: #{$position} con {$record->points} puntos.\n\n";
-            if ($position <= 3) {
-                $plaintext .= "¡Increíble! Estás en el podio. ¡Sigue así para mantener tu posición!\n";
-            } else if ($position <= 10) {
-                $plaintext .= "¡Estás en el TOP 10! Un poco más de esfuerzo y llegarás al podio.\n";
-            } else {
-                $plaintext .= "¡Cada punto cuenta! Sigue practicando para escalar posiciones.\n";
-            }
-            $plaintext .= "\nConsulta el ranking completo: " . $reporturl->out(false);
+            $item = new \stdClass();
+            $item->courseid = $courseid;
+            $item->coursename = $coursename;
+            $item->position = $position;
+            $item->points = (float)$record->points;
+            $item->pointslabel = self::format_points((float)$record->points);
+            $item->participantcount = $participantcount;
+            $item->reporturl = $reporturl->out(false);
 
-            // Subject with emoji and firstname.
-            $subject = "{$posemoji} {$user->firstname}, eres #{$position} en {$course->fullname}";
+            $summaries[$userid]['items'][] = $item;
+        }
 
-            // Build HTML.
-            if ($usetemplate) {
-                $t = '\local_achievements\email_template';
+        mtrace("block_ranking: Collected weekly summaries for course $courseid ({$course->shortname})");
+    }
 
-                // Motivational message based on position.
-                if ($position === 1) {
-                    $motivational = "🔥 ¡Eres el líder indiscutible! Nadie te supera.";
-                } else if ($position <= 3) {
-                    $motivational = "🏆 ¡Estás en el podio! Sigue así para mantener tu posición.";
-                } else if ($position <= 10) {
-                    $motivational = "💪 ¡Estás en el TOP 10! Un poco más y llegas al podio.";
-                } else {
-                    $motivational = "🚀 ¡Cada punto cuenta! Sigue practicando para escalar posiciones.";
-                }
+    /**
+     * Send one weekly notification per user.
+     *
+     * @param array<int, array{userid: int, items: \stdClass[]}> $summaries User summaries.
+     * @param int $pacingusec Microseconds to sleep between message_send() calls (0 = disabled).
+     */
+    protected function send_user_summaries(array $summaries, int $pacingusec = 0): void {
+        if (empty($summaries)) {
+            return;
+        }
 
-                $safefirst = s($user->firstname);
-                $safecourse = s($course->fullname);
-                $body = $t::text("¡Hola <strong>{$safefirst}</strong>! Aquí tienes tu resumen semanal del ranking.")
-                    . $t::divider()
-                    . $t::stat_row([
-                        [$posemoji, "#{$position}", 'Tu posición'],
-                        ['⭐', number_format($record->points, 0, ',', '.'), 'Puntos totales'],
-                    ])
-                    . $t::highlight($motivational)
-                    . $t::text("Curso: <strong>{$safecourse}</strong>");
+        $sent = 0;
+        $remaining = count($summaries);
 
-                $html = $t::wrap(
-                    "Resumen semanal del ranking",
-                    $body,
-                    $reporturl->out(false),
-                    "Ver ranking completo",
-                    '#1e3a5f'
-                );
-            } else {
-                $html = '<p>' . nl2br(s($plaintext)) . '</p>';
+        foreach ($summaries as $summary) {
+            $userid = (int)$summary['userid'];
+            $user = \core_user::get_user($userid, '*', IGNORE_MISSING);
+            if (!$user || !empty($user->deleted) || !empty($user->suspended)) {
+                --$remaining; // Saltado: sin pausa (el pacing es para envíos reales).
+                continue;
             }
 
+            $items = $summary['items'];
+            if (empty($items)) {
+                --$remaining; // Saltado: sin pausa (el pacing es para envíos reales).
+                continue;
+            }
+
+            usort($items, static function(\stdClass $a, \stdClass $b): int {
+                return strcasecmp($a->coursename, $b->coursename);
+            });
+
+            $payload = $this->build_user_payload($user, $items);
             $message = new \core\message\message();
             $message->component = 'block_ranking';
             $message->name = 'ranking_update';
             $message->userfrom = \core_user::get_noreply_user();
             $message->userto = $user;
-            $message->subject = $subject;
-            $message->fullmessage = $plaintext;
+            $message->subject = $payload['subject'];
+            $message->fullmessage = $payload['fullmessage'];
             $message->fullmessageformat = FORMAT_HTML;
-            $message->fullmessagehtml = $html;
-            $message->smallmessage = "{$posemoji} #{$position} en {$course->fullname} con {$record->points} pts";
+            $message->fullmessagehtml = $payload['fullmessagehtml'];
+            $message->smallmessage = $payload['smallmessage'];
             $message->notification = 1;
-            $message->contexturl = $reporturl;
-            $message->contexturlname = $course->fullname;
-            $message->courseid = $courseid;
+            $message->contexturl = $payload['contexturl'];
+            $message->contexturlname = $payload['contexturlname'];
+            $message->courseid = $payload['courseid'];
 
+            // Skip the pause after the last delivery — no point waiting before exiting.
             try {
                 message_send($message);
                 $sent++;
             } catch (\Exception $e) {
                 debugging('block_ranking: Failed to send weekly summary to user ' .
-                    $record->userid . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
+                    $userid . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
             }
 
-            // Skip the pause after the last delivery — no point waiting before exiting.
             if (--$remaining > 0 && $pacingusec > 0) {
                 usleep($pacingusec);
             }
         }
 
-        mtrace("block_ranking: Sent $sent weekly summaries for course $courseid ({$course->shortname})");
+        mtrace("block_ranking: Sent $sent weekly ranking summaries to users");
+    }
+
+    /**
+     * Build the subject, body and link for one user's grouped ranking summary.
+     *
+     * @param \stdClass $user User record.
+     * @param \stdClass[] $items Ranking rows.
+     * @return array<string, mixed> Message payload.
+     */
+    protected function build_user_payload(\stdClass $user, array $items): array {
+        $subject = 'Tu ranking semanal';
+        $displayname = trim((string)($user->firstname ?? ''));
+        if ($displayname === '') {
+            $displayname = fullname($user);
+        }
+
+        $lines = [];
+        foreach ($items as $item) {
+            $lines[] = "{$item->coursename}: #{$item->position} ({$item->pointslabel} pts)";
+        }
+
+        $singlecourse = count($items) === 1;
+        $contexturl = $singlecourse
+            ? new \moodle_url('/blocks/ranking/report.php', ['courseid' => (int)$items[0]->courseid])
+            : new \moodle_url('/my/courses.php');
+        $contexturlname = $singlecourse ? $items[0]->coursename : 'Mis cursos';
+        $courseid = $singlecourse ? (int)$items[0]->courseid : SITEID;
+        $motivational = self::get_motivational_text($items);
+
+        $fullmessage = "¡Hola {$displayname}!\n\n"
+            . "Aquí tienes tu resumen semanal del ranking.\n\n"
+            . implode("\n", $lines)
+            . "\n\n{$motivational}"
+            . "\n\nConsulta el ranking: " . $contexturl->out(false);
+
+        $fullmessagehtml = '<p>' . nl2br(s($fullmessage)) . '</p>';
+        if (class_exists('\local_achievements\email_template')) {
+            $t = '\local_achievements\email_template';
+            $body = $t::text(
+                '¡Hola <strong>' . s($displayname) . '</strong>! Aquí tienes tu resumen semanal del ranking.',
+                'left'
+            );
+
+            $body .= $t::divider();
+            $body .= $t::stat_row(self::get_summary_cards($items));
+            $body .= $t::highlight(self::format_html_lines($items), 'neutral', 'left');
+            $body .= $t::highlight(s($motivational), 'warning', 'left');
+
+            $fullmessagehtml = $t::wrap(
+                'Resumen semanal del ranking',
+                $body,
+                $contexturl->out(false),
+                $singlecourse ? 'Ver ranking completo' : 'Ver mis cursos',
+                '#1e3a5f'
+            );
+        }
+
+        return [
+            'subject' => $subject,
+            'fullmessage' => $fullmessage,
+            'fullmessagehtml' => $fullmessagehtml,
+            'smallmessage' => $singlecourse ? $lines[0] : 'Ranking semanal: ' . count($items) . ' cursos',
+            'contexturl' => $contexturl,
+            'contexturlname' => $contexturlname,
+            'courseid' => $courseid,
+        ];
+    }
+
+    /**
+     * Return compact stat cards for the existing branded template.
+     *
+     * @param \stdClass[] $items Ranking rows.
+     * @return array<int, array<int, string>>
+     */
+    private static function get_summary_cards(array $items): array {
+        if (count($items) === 1) {
+            $item = $items[0];
+            return [
+                [self::position_icon((int)$item->position), '#' . $item->position, 'Tu posición'],
+                ['', $item->pointslabel, 'Puntos totales'],
+            ];
+        }
+
+        $bestposition = min(array_map(static function(\stdClass $item): int {
+            return (int)$item->position;
+        }, $items));
+
+        return [
+            ['', (string)count($items), 'Cursos'],
+            [self::position_icon($bestposition), '#' . $bestposition, 'Mejor posición'],
+        ];
+    }
+
+    /**
+     * Build the HTML course list.
+     *
+     * @param \stdClass[] $items Ranking rows.
+     * @return string HTML lines.
+     */
+    private static function format_html_lines(array $items): string {
+        $lines = [];
+        foreach ($items as $item) {
+            $lines[] = s($item->coursename) . ': <strong>#' . (int)$item->position . '</strong> (' .
+                s($item->pointslabel) . ' pts)';
+        }
+        return implode('<br>', $lines);
+    }
+
+    /**
+     * Return motivational copy without claiming TOP 10 in small rankings.
+     *
+     * @param \stdClass[] $items Ranking rows.
+     * @return string Motivational copy.
+     */
+    private static function get_motivational_text(array $items): string {
+        foreach ($items as $item) {
+            if ((int)$item->position === 1) {
+                return '¡Vas en cabeza! Sigue así para mantener tu posición.';
+            }
+        }
+
+        foreach ($items as $item) {
+            if ((int)$item->position <= 3) {
+                return '¡Estás en el podio! Sigue así para mantener tu posición.';
+            }
+        }
+
+        foreach ($items as $item) {
+            if ((int)$item->position <= 10 && (int)$item->participantcount >= 15) {
+                return '¡Estás en el TOP 10! Un poco más de esfuerzo y llegarás al podio.';
+            }
+        }
+
+        return '¡Cada punto cuenta! Sigue practicando para escalar posiciones.';
+    }
+
+    /**
+     * Return the course name as it should appear in compact notification copy.
+     *
+     * @param string $fullname Formatted course full name.
+     * @return string Compact course name.
+     */
+    public static function compact_course_name(string $fullname): string {
+        $original = trim($fullname);
+        $compact = preg_replace('/\s+/', ' ', $original);
+        $compact = trim((string)$compact);
+
+        do {
+            $previous = $compact;
+            $compact = preg_replace(
+                '/^(Pack Premium|Temario PDF|Curso Online)(\s*:\s*|\s*\+\s*Curso Online\s*:?\s*)/i',
+                '',
+                $compact
+            );
+            $compact = trim((string)$compact);
+        } while ($compact !== '' && $compact !== $previous);
+
+        return $compact !== '' ? $compact : $original;
+    }
+
+    /**
+     * Format ranking points for compact notification lines.
+     *
+     * @param float $points Points.
+     * @return string Formatted points.
+     */
+    private static function format_points(float $points): string {
+        $decimals = (abs($points - round($points)) < 0.00001) ? 0 : 1;
+        return number_format($points, $decimals, ',', '.');
+    }
+
+    /**
+     * Return a display icon for a ranking position.
+     *
+     * @param int $position Ranking position.
+     * @return string Icon.
+     */
+    private static function position_icon(int $position): string {
+        if ($position === 1) {
+            return '';
+        }
+        if ($position === 2) {
+            return '';
+        }
+        if ($position === 3) {
+            return '';
+        }
+        return '';
     }
 }

@@ -150,5 +150,46 @@ function xmldb_block_ranking_upgrade($oldversion, $block) {
         upgrade_plugin_savepoint(true, 2026021700, 'block', 'ranking');
     }
 
+    if ($oldversion < 2026062200) {
+        // Create daily digest state table for aggregated ranking notifications.
+        $table = new xmldb_table('block_ranking_daily_state');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('localdate', XMLDB_TYPE_INTEGER, '8', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('startposition', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('startpoints', XMLDB_TYPE_NUMBER, '10,5', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('endposition', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('endpoints', XMLDB_TYPE_NUMBER, '10,5', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('enteredtop3', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('lefttop3', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('wasovertaken', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('positionslost', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('positionsgained', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('sent', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timesent', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        $table->add_index('course_user_date_uix', XMLDB_INDEX_UNIQUE, ['courseid', 'userid', 'localdate']);
+        $table->add_index('date_sent_ix', XMLDB_INDEX_NOTUNIQUE, ['localdate', 'sent']);
+        $table->add_index('course_date_sent_ix', XMLDB_INDEX_NOTUNIQUE, ['courseid', 'localdate', 'sent']);
+        $table->add_index('userid_ix', XMLDB_INDEX_NOTUNIQUE, ['userid']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        upgrade_plugin_savepoint(true, 2026062200, 'block', 'ranking');
+    }
+
+    if ($oldversion < 2026062202) {
+        // Code-only upgrade: staff users are excluded from new ranking awards.
+        upgrade_plugin_savepoint(true, 2026062202, 'block', 'ranking');
+    }
+
     return true;
 }

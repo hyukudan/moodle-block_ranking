@@ -72,6 +72,29 @@ class provider implements
             'privacy:metadata:ranking_logs'
         );
 
+        $collection->add_database_table(
+            'block_ranking_daily_state',
+            [
+                'userid' => 'privacy:metadata:block_ranking_daily_state:userid',
+                'courseid' => 'privacy:metadata:block_ranking_daily_state:courseid',
+                'localdate' => 'privacy:metadata:block_ranking_daily_state:localdate',
+                'startposition' => 'privacy:metadata:block_ranking_daily_state:startposition',
+                'startpoints' => 'privacy:metadata:block_ranking_daily_state:startpoints',
+                'endposition' => 'privacy:metadata:block_ranking_daily_state:endposition',
+                'endpoints' => 'privacy:metadata:block_ranking_daily_state:endpoints',
+                'enteredtop3' => 'privacy:metadata:block_ranking_daily_state:enteredtop3',
+                'lefttop3' => 'privacy:metadata:block_ranking_daily_state:lefttop3',
+                'wasovertaken' => 'privacy:metadata:block_ranking_daily_state:wasovertaken',
+                'positionslost' => 'privacy:metadata:block_ranking_daily_state:positionslost',
+                'positionsgained' => 'privacy:metadata:block_ranking_daily_state:positionsgained',
+                'sent' => 'privacy:metadata:block_ranking_daily_state:sent',
+                'timesent' => 'privacy:metadata:block_ranking_daily_state:timesent',
+                'timecreated' => 'privacy:metadata:block_ranking_daily_state:timecreated',
+                'timemodified' => 'privacy:metadata:block_ranking_daily_state:timemodified',
+            ],
+            'privacy:metadata:block_ranking_daily_state'
+        );
+
         return $collection;
     }
 
