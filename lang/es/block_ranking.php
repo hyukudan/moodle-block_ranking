@@ -28,16 +28,22 @@
 $string['pacing_usec'] = 'Microsegundos entre envíos del resumen semanal';
 $string['pacing_usec_desc'] = 'Pausa entre cada message_send() durante la tarea cron weekly_summary. 1500000 = 1,5 segundos (recomendado). Pon 0 para desactivar. Evita ráfagas sub-segundo que históricamente dispararon los bloqueos S3115/S3140 de Microsoft.';
 
+// Proveedor de mensajes y notificaciones en tiempo real.
+$string['messageprovider:ranking_update'] = 'Novedades de tu posición en el ranking';
+$string['notification_top3'] = '¡Enhorabuena! Acabas de entrar en el TOP 3 del ranking de {$a}. Ese hueco te lo has ganado estudiando: ¡defiéndelo!';
+$string['notification_overtaken'] = '{$a->username} te ha tomado la delantera en el ranking de {$a->coursename}. Nada que no arregle una buena sesión de estudio: ¡a por la remontada!';
+$string['notification_weekly_summary'] = 'Tu posición en el ranking de {$a->coursename}: nº {$a->position} con {$a->points} puntos. Cada test que haces te acerca un poco más.';
+
 // Resúmenes diarios de ranking (agregación, sustituye a las notificaciones en tiempo real).
 $string['see_full_ranking'] = 'Ver ranking completo';
 $string['notification_daily_subject'] = '{$a->firstname}, novedades de tu ranking en {$a->coursename}';
 $string['notification_daily_greeting'] = 'Hola {$a->firstname}, aquí tienes tu resumen de ranking en {$a->coursename}.';
-$string['notification_daily_gained_one'] = 'Has subido 1 posición.';
-$string['notification_daily_gained_many'] = 'Has subido {$a} posiciones.';
-$string['notification_daily_lost_one'] = 'Has bajado 1 posición.';
-$string['notification_daily_lost_many'] = 'Has bajado {$a} posiciones.';
-$string['notification_daily_enteredtop3'] = 'Has entrado en el TOP 3.';
-$string['notification_daily_lefttop3'] = 'Has salido del TOP 3.';
+$string['notification_daily_gained_one'] = '¡Has subido 1 posición, buen trabajo!';
+$string['notification_daily_gained_many'] = '¡Has subido {$a} posiciones, buen trabajo!';
+$string['notification_daily_lost_one'] = 'Has bajado 1 posición. Un par de tests y la recuperas.';
+$string['notification_daily_lost_many'] = 'Has bajado {$a} posiciones. Un par de tests y las recuperas.';
+$string['notification_daily_enteredtop3'] = '¡Has entrado en el TOP 3! Sigue así.';
+$string['notification_daily_lefttop3'] = 'Has salido del TOP 3… de momento. Está a un empujón.';
 $string['notification_daily_status'] = 'Posición actual: {$a->position}. Puntos: {$a->points}.';
 $string['notification_daily_link'] = 'Consulta el ranking completo: {$a}';
 $string['notification_daily_smallmessage'] = 'Novedades de ranking: {$a}';
